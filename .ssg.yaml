@@ -1,0 +1,10 @@
+outputDir: public
+title: Brian Greenhill
+description: Engineering Manager at GitHub working on Observability
+github: https://github.com/BrianGreenhill
+contentDir: content
+author: Brian Greenhill
+authorImg: https://avatars.githubusercontent.com/u/1642339?v=4
+linkedin: https://www.linkedin.com/in/briangreenhill
+email: brian@briangreenhill.net
+theme: default
