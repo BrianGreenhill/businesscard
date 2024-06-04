@@ -129,3 +129,51 @@ footer {
     padding: 20px 0;
 }
 
+
+@media(prefers-color-scheme: dark) {
+    body {
+        background-color: #333;
+        color: #fff;
+    }
+
+    header.container {
+        border-bottom: 1px solid #555;
+    }
+
+    header h1 {
+        color: #fff;
+    }
+
+    header h2 {
+        color: #ccc;
+    }
+
+    .social-icons a {
+        color: #fff;
+    }
+
+    .social-icons img {
+        filter: invert(1);
+    }
+
+    article header h1 {
+        color: #fff;
+    }
+
+    .post-link {
+        color: #00aaff;
+    }
+
+    .post-meta {
+        color: #aaa;
+    }
+
+    footer {
+        color: #ccc;
+    }
+
+    nav a {
+        color: #00aaff;
+    }
+}
+
