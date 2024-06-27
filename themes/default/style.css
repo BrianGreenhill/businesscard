@@ -9,8 +9,8 @@ body {
 
 .container {
     max-width: 600px;
-    margin: 20px auto;
-    padding: 0 20px;
+    margin: 40px auto;
+    padding: 0 40px;
 }
 
 header {
@@ -38,7 +38,7 @@ header h2 {
 }
 
 .social-icons {
-    margin-top: 20px;
+    margin-top: 40px;
 }
 
 .social-icons a {
@@ -63,7 +63,7 @@ header .author-img {
     width: 150px;
     height: 150px;
     border-radius: 50%;
-    margin-top: 20px;
+    margin-top: 40px;
 }
 
 main {
@@ -84,7 +84,7 @@ h2 {
 .post-item {
     display:flex;
     justify-content: space-between;
-    margin: 20px 0;
+    margin: 40px 0;
     border-bottom: 1px solid #eaeaea;
 }
 
@@ -119,14 +119,14 @@ h2 {
 .cover-img {
     width: 100%;
     height: auto;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
 }
 
 footer {
     text-align: center;
     font-size: 0.8em;
     color: #888;
-    padding: 20px 0;
+    padding: 40px 0;
 }
 
 
