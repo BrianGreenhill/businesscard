@@ -230,6 +230,23 @@ The final commit message told the whole story:
 
 Eight commits. The agent built the Go version's test harness, proved its math, redesigned its architecture, then built an entirely separate implementation in another language that passes the same tests. The Go code — all 10,573 lines of it — is now provably disposable.
 
+Then it kept going. It added investment plan generation and projected health scoring to the Python server (+180 lines of business logic, bug fix included). Then it Dockerized both implementations with compose profiles:
+
+```bash
+docker compose up -d                        # Go (default)
+docker compose --profile python up -d       # Python drop-in replacement
+```
+
+Same port. Same volume. Same database. Same healthcheck. You can swap your entire backend implementation with a single flag. 22/22 scenarios pass in both containers.
+
+Then it enabled both to run *simultaneously* — Go on :8080, Python on :5001, sharing the same SQLite database. And then came the most telling commit of all.
+
+The agent noticed the Python health scoring was wrong. Not wrong in a way the scenarios caught — the simplified 4-check approximation produced *a* score, just not the *right* score. So it ported the full Adam v2 algorithm: all 10 penalty sections (§1 concentration through §10 geographic bias), look-through analysis with weighted-sum map-reduce from fund top_holdings JSON, fee audit with TER penalties, hedge bonus with time-horizon scaling, forward fee projection from the whitelist. 488 lines added, 63 replaced. And then it added a new behavioral scenario to catch this class of drift in the future.
+
+The commit message reported the result: **Go 70/100 = Python 70/100.**
+
+This is the Dark Factory correcting itself. The agent didn't just build a second implementation — it held the two implementations to the same standard, found where they diverged, and closed the gap. The behavioral scenarios were necessary but not sufficient; the agent went beyond them to enforce *numerical* parity on the health algorithm.
+
 ## What I Saw
 
 Here's what struck me, watching from the outside:
@@ -256,4 +273,4 @@ I didn't write any of that code. I didn't review any of it before it was committ
 
 ---
 
-*Eight commits. 77 minutes. 10,573 lines of Go. 1,734 lines of Python. Both pass the same 22 behavioral scenarios. The code is provably an implementation detail. Zero human keystrokes in the production code.*
+*Twelve commits. 103 minutes. Two complete server implementations converging on numerical parity. One Docker compose file to run both. The Dark Factory correcting its own output. Zero human keystrokes in the production code.*
