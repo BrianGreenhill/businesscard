@@ -5,6 +5,7 @@
 {{ template "body" .Config }}
 <section>
     <div class="container">
+        <h3 class="section-heading">Writing</h3>
         <ul class="posts-list">
             {{ range sortByDate .Posts }}
             <li class="post-item">
@@ -16,11 +17,6 @@
     </div>
 </section>
 <footer class="container">
-    <div class="social-icons">
-        <a href="{{.Config.Github}}"><img src="assets/github-mark.svg" alt="GitHub" /></a>
-        <a href="{{.Config.Linkedin}}"><img src="assets/linkedin.png" alt="LinkedIn" /></a>
-        <a href="mailto:{{.Config.Email}}"><img src="assets/email.svg" alt="Email" /></a>
-    </div>
     &copy; {{now.UTC.Year}} {{.Config.Author}}. All rights reserved.
 </footer>
 

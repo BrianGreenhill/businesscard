@@ -1,71 +1,109 @@
 body {
     font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-    line-height: 1.8;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
     background-color: #ffffff;
-    color: #333;
+    color: #444;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
 }
 
 .container {
-    max-width: 600px;
-    margin: 20px auto;
-    padding: 0 20px;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 24px;
 }
 
 header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 0;
 }
 
 header.container {
     border-bottom: 1px solid #eaeaea;
+    padding-top: 64px;
+    padding-bottom: 48px;
+    margin-bottom: 0;
 }
 
 header h1 {
-    font-size: 3em;
+    font-size: 2.4em;
     margin: 0;
-    font-weight: bold;
-    color: #333;
-    letter-spacing: -2px;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
 }
 
 header h2 {
-    font-size: 1.3em;
+    font-size: 1.05em;
     font-weight: 300;
-    margin: 0;
-    color: #aaa;
+    margin: 8px 0 0 0;
+    color: #999;
 }
 
 .social-icons {
-    margin-top: 20px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    text-align: center;
 }
 
 .social-icons a {
     display: inline-block;
-    margin-right: 10px;
+    margin: 0 6px;
     color: #333;
     font-size: 1.5em;
 }
 
 .social-icons img {
-    width: 30px;
+    width: 24px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.social-icons img:hover {
+    opacity: 0.8;
+}
+
+/* Hide social icons on post pages (asset paths differ) */
+article ~ footer .social-icons {
+    display: none;
+}
+article header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    padding-top: 32px;
+}
+
+.site-title {
+    text-decoration: none;
+    color: inherit;
+}
+
+.site-title:visited {
+    color: inherit;
 }
 
 article header h1 {
-    font-size: 2em;
-    margin: 0;
-    font-weight: bold;
-    color: #333;
+    font-size: 1.8em;
+    margin: 0 0 16px 0;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: -0.5px;
+    line-height: 1.25;
 }
 
 header .author-img {
     border-radius: 50%;
     margin-top: 20px;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 24px;
 }
 
 main {
-    margin-bottom: 40px;
+    margin-bottom: 0;
 }
 
 h2 {
@@ -74,43 +112,59 @@ h2 {
     padding-bottom: 10px;
 }
 
+/* Homepage section label */
+.section-heading {
+    font-size: 0.75em;
+    font-weight: 500;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 48px 0 16px 0;
+}
+
 .posts-list {
     list-style: none;
     padding: 0;
+    margin: 0;
 }
 
 .post-item {
-    display:flex;
+    display: flex;
     justify-content: space-between;
-    margin: 20px 0;
-    border-bottom: 1px solid #eaeaea;
+    align-items: baseline;
+    padding: 8px 0;
 }
 
 .post-link {
     text-decoration: none;
-    color: #007acc;
-    font-size: 1.5em;
+    color: #444;
+    font-size: 1em;
     display: block;
-    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.post-link:visited {
+    color: #444;
 }
 
 .post-link:hover {
-    text-decoration: underline;
+    color: #222;
 }
 
 .post-meta {
-    font-size: 0.9em;
-    color: #666;
+    font-size: 0.8em;
+    color: #999;
     display: flex;
     align-items: center;
+    white-space: nowrap;
 }
 
 .post-meta .author-img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;style
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
     vertical-align: middle;
-    margin-right: 10px;
+    margin-right: 8px;
     margin-top: 0;
 }
 
@@ -120,30 +174,149 @@ h2 {
     margin-bottom: 20px;
 }
 
+article img {
+    max-width: 100%;
+    height: auto;
+    margin: 24px 0;
+}
+
+/* Post metadata on article page */
+article header .post-meta {
+    font-size: 0.75em;
+    font-weight: 500;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 0;
+}
+
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.article-meta .author-img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin: 0;
+}
+
+/* Article body */
+article section .container {
+    line-height: 1.7;
+    font-size: 1.05em;
+    padding-top: 8px;
+    padding-bottom: 48px;
+}
+
+article section .container > *:first-child {
+    margin-top: 0;
+}
+
+article section .container h2 {
+    font-size: 0.75em;
+    font-weight: 500;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 3em 0 1.2em 0;
+    padding-bottom: 0;
+}
+
+article section .container p {
+    margin: 1.2em 0;
+}
+
+article section .container strong {
+    font-weight: 600;
+    color: #333;
+}
+
+article section .container blockquote {
+    border-left: 2px solid #ddd;
+    margin: 1.5em 0;
+    padding: 0 0 0 1.2em;
+    color: #666;
+    font-style: italic;
+}
+
+article section .container pre {
+    background: #f8f8f8;
+    padding: 1.2em;
+    overflow-x: auto;
+    border-radius: 3px;
+    line-height: 1.5;
+    font-size: 0.85em;
+    margin: 1.5em 0;
+}
+
+article section .container code {
+    font-size: 0.88em;
+}
+
+article section .container p code {
+    background: #f5f5f5;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+article section .container a {
+    color: #666;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+article section .container a:visited {
+    color: #666;
+}
+
+article section .container a:hover {
+    color: #333;
+}
+
+article section .container ul,
+article section .container ol {
+    margin: 1.2em 0;
+    padding-left: 1.5em;
+}
+
+article section .container li {
+    margin: 0.4em 0;
+    line-height: 1.6;
+}
+
+article section .container hr {
+    border: none;
+    border-top: 1px solid #eaeaea;
+    margin: 2.5em 0;
+}
+
 footer {
     text-align: center;
-    font-size: 0.8em;
-    color: #888;
-    padding: 20px 0;
+    font-size: 0.75em;
+    color: #aaa;
+    padding: 48px 0 32px 0;
 }
 
 
 @media(prefers-color-scheme: dark) {
     body {
-        background-color: #333;
-        color: #fff;
+        background-color: #1a1a1a;
+        color: #d4d4d4;
     }
 
     header.container {
-        border-bottom: 1px solid #555;
+        border-bottom: 1px solid #333;
     }
 
     header h1 {
-        color: #fff;
+        color: #eee;
     }
 
     header h2 {
-        color: #ccc;
+        color: #777;
     }
 
     .social-icons a {
@@ -155,23 +328,69 @@ footer {
     }
 
     article header h1 {
-        color: #fff;
+        color: #eee;
     }
 
     .post-link {
-        color: #00aaff;
+        color: #d4d4d4;
+    }
+
+    .post-link:visited {
+        color: #d4d4d4;
+    }
+
+    .post-link:hover {
+        color: #fff;
     }
 
     .post-meta {
+        color: #777;
+    }
+
+    article section .container strong {
+        color: #eee;
+    }
+
+    article section .container a {
+        color: #aaa;
+        text-decoration: underline;
+    }
+
+    article section .container a:visited {
         color: #aaa;
     }
 
+    article section .container a:hover {
+        color: #eee;
+    }
+
+    article section .container blockquote {
+        border-left-color: #444;
+        color: #999;
+    }
+
+    article section .container pre {
+        background: #252525;
+    }
+
+    article section .container p code {
+        background: #2a2a2a;
+    }
+
+    article section .container hr {
+        border-top-color: #333;
+    }
+
+    h2 {
+        color: #eee;
+    }
+
     footer {
-        color: #ccc;
+        color: #666;
     }
 
     nav a {
-        color: #00aaff;
+        color: #aaa;
     }
 }
 

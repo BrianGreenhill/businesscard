@@ -3,8 +3,13 @@
 <body>
     <header class="container">
         <img class="author-img" src="{{.AuthorImg}}" alt="{{.Author}}" />
-        <h1>{{.Title}}</h1>
+        <h1><a href="/" class="site-title">{{.Title}}</a></h1>
         <h2>{{.Description}}</h2>
+        <div class="social-icons">
+            <a href="{{.Github}}"><img src="assets/github-mark.svg" alt="GitHub" /></a>
+            <a href="{{.Linkedin}}"><img src="assets/linkedin.png" alt="LinkedIn" /></a>
+            <a href="mailto:{{.Email}}"><img src="assets/email.svg" alt="Email" /></a>
+        </div>
     </header>
     <main>
         {{end}}

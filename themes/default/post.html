@@ -6,10 +6,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{.Post.Title}} | {{.Post.Description}}">
-    <title>{{.Config.Title}} - {{.Post.Title}}</title>
+    <meta name="description" content="{{.Post.Description}}">
+    <title>{{.Post.Title}} — {{.Config.Author}}</title>
     <link rel="icon" href="../assets/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="../assets/style.css">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{.Post.Title}}">
+    <meta property="og:description" content="{{.Post.Description}}">
+    <meta property="og:site_name" content="{{.Config.Author}}">
+    <meta property="article:author" content="{{.Post.Author}}">
+    <meta property="article:published_time" content="{{.Post.Date}}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{.Post.Title}}">
+    <meta name="twitter:description" content="{{.Post.Description}}">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://briancurtis.de/posts/{{.Post.Link}}">
+
+    <style>.social-icons { display: none; }</style>
 </head>
 
 {{ template "body" .Config }}
@@ -21,10 +39,9 @@
             {{if hasCover .Post}}
             <img class="cover-img" src="{{.Post.CoverImg}}" alt="{{.Post.Title}}" />
             {{end}}
-            <p class="post-meta">
-                <img class="author-img" src="{{.Post.AuthorImg}}" alt="{{.Post.Author}}" />{{.Post.Author}}
-                |
-                {{.Post.Date}}
+            <p class="post-meta article-meta">
+                <img class="author-img" src="{{.Post.AuthorImg}}" alt="{{.Post.Author}}" />
+                <span>{{.Post.Author}} · {{.Post.Date}}</span>
             </p>
         </div>
     </header>
@@ -33,11 +50,6 @@
     </section>
 </article>
 <footer class="container">
-    <div class="social-icons">
-        <a href="{{.Config.Github}}"><img src="../assets/github-mark.svg" alt="GitHub" /></a>
-        <a href="{{.Config.Linkedin}}"><img src="../assets/linkedin.png" alt="LinkedIn" /></a>
-        <a href="mailto:{{.Config.Email}}"><img src="../assets/email.svg" alt="Email" /></a>
-    </div>
     &copy; {{now.UTC.Year}} {{.Config.Author}}. All rights reserved.
 </footer>
 
