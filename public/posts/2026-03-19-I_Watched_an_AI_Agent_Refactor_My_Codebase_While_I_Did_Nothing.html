@@ -65,101 +65,106 @@
 <p>Code <strong>must not be</strong> written by humans. Code <strong>must not be</strong> reviewed by humans.</p>
 </blockquote>
 <p>The concept sounded radical but distant — something for well-funded teams building enterprise permissioning systems. Then, on a Thursday evening in March, I watched it happen to my own codebase in real time.</p>
-<h2>The Setup</h2>
-<p>Adam is a personal wealth management platform I've been building in Go. It tracks a 31-fund portfolio migrating between brokerages, with health scoring, Monte Carlo forecasting, tax-optimized exit planning, and a server-rendered web UI. At the time, it was roughly 8,000 lines across <code>internal/{web,service,db,domain}</code>, with a clean service layer that had been extracted via TDD just a few commits prior.</p>
+<h2>The System Before</h2>
+<p>Adam is a personal wealth management platform I've been building in Go. It tracks a 31-fund portfolio migrating between brokerages, with health scoring, Monte Carlo forecasting, tax-optimized exit planning, and a server-rendered web UI. About 8,000 lines across <code>internal/{web,service,db,domain}</code>.</p>
+<p>The architecture before the agent touched it was typical of an organically-grown Go web app. The service layer had just been extracted via TDD a few commits prior, but the extraction was incomplete. Here's what it looked like:</p>
+<p><strong>Fat handlers.</strong> The dashboard handler was 150+ lines of mixed concerns — fetching holdings from the database, computing net invested, calculating period returns, calling the service for health scores, then assembling template data. Each handler was a small orchestrator that knew too much about how data flowed through the system.</p>
+<pre><code class="language-go">// Before: handlers_dashboard.go (simplified)
+func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+    holdingsList, _ := s.db.ListHoldings()
+    data.NetInvested, _ = s.db.NetCashInvested()
+    data.PerfYTD, data.PerfYTDEUR = s.periodReturn(...)
+    health, _ := s.svc.PortfolioHealth()
+    exitPlan, _ := s.svc.GenerateExitPlan()
+    // ... 100 more lines of data assembly
+    s.renderTemplate(w, &quot;dashboard&quot;, data)
+}
+</code></pre>
+<p><strong>Thin service, scattered logic.</strong> <code>service.go</code> was 11 lines — just a struct holding a <code>DataStore</code> reference. The actual business logic lived in separate files (<code>portfolio_health.go</code>, <code>generate_exit_plan.go</code>, <code>wealth_forecast.go</code>), each containing a method that fetched data from the store and called a pure computation function. There was no caching, no dependency tracking, no way to know that <code>PortfolioHealth</code> and <code>GenerateExitPlan</code> both depended on the same underlying allocation data.</p>
+<p><strong>No computation reuse.</strong> Every page load recomputed everything from scratch. Visit the dashboard, and Adam recalculates your health score, fetches all holdings, computes allocation drift. Visit the plan page, and it does most of that work again. The service methods were independent — they didn't know about each other or share intermediate results.</p>
+<p><strong>Hand-written domain types.</strong> Structs were defined manually across half a dozen files in <code>internal/domain/</code>. They evolved organically alongside the code, with no single source of truth.</p>
+<p><strong>Unit tests only.</strong> The test suite verified individual pure functions (score is bounded, grades are monotonic), but nothing tested the system end-to-end. No one had asked: &quot;If I visit the plan page three times, do I get the same result?&quot;</p>
 <p>I had two Copilot CLI sessions open. One was the <strong>worker</strong> — an agent tasked with hardening the codebase. The other was <strong>me, watching</strong>. I set up a monitoring loop that polled <code>git status</code> every three seconds and captured diffs as they materialized. I wanted to see what an unattended agent would actually <em>do</em> when given architectural latitude.</p>
-<p>At 21:38, I started the monitor. At 21:40, the first file changed.</p>
-<h2>Act 1: The Cache Layer (21:40 – 21:48)</h2>
-<p>The agent's first move was surgical. At 21:40:05, <code>internal/service/service.go</code> gained three new fields:</p>
+<h2>The Agent's Strategy</h2>
+<p>What struck me most wasn't the speed — it was the <em>sequence of design decisions</em>. The agent didn't just start writing code. It made a series of architectural choices, each one building confidence for the next.</p>
+<h3>Step 1: Add caching, then prove it's correct</h3>
+<p>The agent's first move addressed the most obvious performance problem: redundant computation. It added a version-based cache to <code>Service</code>:</p>
 <pre><code class="language-go">type Service struct {
     store    DataStore
     cache    sync.Map
     cacheVer int64
 }
 </code></pre>
-<p>A <code>sync.Map</code> for concurrent-safe caching. An <code>int64</code> atomic version counter. An <code>Invalidate()</code> method that bumps the version. A <code>cached()</code> helper that keys lookups by <code>&quot;name:version&quot;</code>, so bumping the version instantly stales everything without iterating the map.</p>
-<p>Seven seconds later, <code>PortfolioHealth()</code> was wrapped — the real computation pushed into <code>portfolioHealthUncached()</code>, the public method becoming a one-liner through the cache. Then <code>GenerateExitPlan</code>. Then <code>WealthForecast</code> (using a <code>[2]any</code> tuple to cache the multi-return). Then <code>InvestmentPlan</code> and <code>SavingsPlan</code>, with parameterized cache keys that include the surplus amount: <code>&quot;investment_plan:1500.00&quot;</code>.</p>
-<p>By 21:41, thirty seconds after the first edit, five service methods were cached. The agent then turned to the web layer — systematically finding every handler that mutates data and inserting <code>s.svc.Invalidate()</code> after the mutation. Import uploads. Price refreshes. Settings changes. Account creation and deletion. Allocation target updates. Fund whitelist modifications. Eleven mutation paths, all wired in under two minutes.</p>
-<p>At 21:43, a new file appeared: <code>internal/web/scenario_test.go</code>. The agent wasn't just writing implementation — it was writing the proof. 310 lines. Six end-to-end scenarios:</p>
+<p>The design is simple but clever. A <code>sync.Map</code> for concurrent reads, an atomic <code>int64</code> version counter. Cache keys include the version: <code>&quot;portfolio_health:42&quot;</code>. Calling <code>Invalidate()</code> bumps the version to 43, making every cached entry stale without iterating the map. This is O(1) invalidation — you don't need to know what's cached.</p>
+<p>The agent wrapped all five expensive service methods (<code>PortfolioHealth</code>, <code>GenerateExitPlan</code>, <code>WealthForecast</code>, <code>GenerateInvestmentPlan</code>, <code>GenerateSavingsPlan</code>), then found all eleven mutation paths in the web layer — imports, price refreshes, settings changes, account operations, allocation targets, whitelist updates — and wired <code>Invalidate()</code> after each one.</p>
+<p>But here's the design decision I found most interesting: the agent didn't commit the cache alone. It wrote <strong>scenario tests first</strong>. Six end-to-end tests that seed a realistic portfolio and drive HTTP requests through actual handlers:</p>
 <ul>
-<li><strong>Plan page idempotency</strong>: visit <code>/plan</code> three times, verify identical HTML and no duplicate health events</li>
-<li><strong>Dashboard data consistency</strong>: seed a full portfolio, verify correct totals render</li>
-<li><strong>Health score stability</strong>: same data → same score, every time</li>
-<li><strong>Settings change invalidation</strong>: modify a config, verify the score changes</li>
-<li><strong>Import deduplication</strong>: same file hash rejected</li>
-<li><strong>Cache invalidation on target change</strong>: shift equity target from 55% to 90%, verify the score moves</li>
+<li>Visit <code>/plan</code> three times → identical HTML, no duplicate health events</li>
+<li>Change an allocation target from 55% to 90% → health score changes</li>
+<li>Import the same file twice → second import rejected</li>
 </ul>
-<p>These aren't unit tests. They're <em>scenario tests</em> in precisely the StrongDM sense — end-to-end user stories that verify observable behavior. The agent seeded a realistic portfolio with four categorized funds, holdings with prices, allocation targets, whitelist entries, and a cash account. Then it drove HTTP requests through the actual handlers and asserted on the responses.</p>
-<p><strong>Commit 1</strong> landed at 21:47:47: <code>feat: dark factory — scenario tests + computation caching</code>. Eleven files, +441 lines, -7. The commit message was meticulous, listing all six test scenarios and all eleven invalidation paths.</p>
-<p>Total elapsed time from first edit to pushed commit: <strong>7 minutes, 42 seconds</strong>.</p>
-<h2>Act 2: Proving It Works (21:49 – 21:50)</h2>
-<p>Two minutes after the first commit, a new file dropped: <code>internal/service/contract_test.go</code>. This wasn't more scenario testing — it was <em>property-based contract testing</em>. The kind of thing StrongDM described when they talked about ensuring agents don't just <code>assert true</code>.</p>
-<p>The agent defined function contracts as invariants:</p>
+<p>These scenarios encode <em>user-visible invariants</em>, not implementation details. They don't test that the cache exists — they test that the system behaves correctly whether or not caching is present. This meant the agent could later rip out the cache and replace it with something else (which it did) without breaking any tests.</p>
+<h3>Step 2: Prove the math independently</h3>
+<p>Two minutes after the first commit, a new file appeared: <code>internal/service/contract_test.go</code>. Property-based contract tests — 13 invariants, each verified with 500 randomized inputs:</p>
 <ul>
 <li><code>ComputeScore</code> always returns a value in <code>[0, 100]</code></li>
 <li><code>ComputeScore</code> is deterministic (same input → same output)</li>
-<li><code>ComputeScore</code> is monotonic: higher TER → equal or lower score; more diversification → equal or higher score; higher concentration → equal or lower score</li>
+<li><code>ComputeScore</code> is monotonic: higher TER → equal or lower score</li>
 <li><code>GradeTER</code> only returns <code>{&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;}</code> and is monotonic</li>
-<li><code>GradeFromScore</code> is monotonic</li>
-<li><code>ComputeGeoBias</code>: US% + non-US% sums to 100% (when equity exists)</li>
-<li><code>Percentile</code> is monotonic and respects boundary conditions</li>
-<li><code>RunSimulation</code>: P10 ≤ P25 ≤ P50 ≤ P75 ≤ P90 for all time steps</li>
+<li><code>ComputeGeoBias</code>: US% + non-US% sums to 100%</li>
+<li><code>RunSimulation</code>: P10 ≤ P25 ≤ P50 ≤ P75 ≤ P90 at every time step</li>
 </ul>
-<p>Each contract was tested with <strong>500 randomized iterations</strong>, using dedicated random generators that produce valid but diverse inputs — random ISINs, random fund exposures, random health metrics with all fields populated. 13 tests × 500 iterations = <strong>6,500 property checks</strong> that could catch any invariant violation the scenario tests might miss.</p>
-<p>The agent also added <code>doc.go</code> with <strong>pyramid summaries</strong> — another StrongDM technique. Four levels of progressive disclosure:</p>
-<ul>
-<li><strong>Level 0</strong> (10 words): <em>&quot;Personal wealth tracker: Go/SQLite, 31 funds, web UI.&quot;</em></li>
-<li><strong>Level 1</strong> (100 words): Purpose, data sources, features, tech stack.</li>
-<li><strong>Level 2</strong> (architecture): Package diagram, request flow, caching strategy, testing tiers.</li>
-<li><strong>Level 3</strong>: Pointer to full PLAN.md (800+ lines).</li>
-</ul>
-<p>The pyramid exists so that <em>future agents</em> can quickly orient themselves — enumerate the short summaries, zoom into detail only when needed. It's infrastructure for the Dark Factory's next shift.</p>
-<p><strong>Commit 2</strong> at 21:50:05: <code>feat: dark factory — contract tests + pyramid summaries</code>. +441 lines. The test suite now had three tiers: 38 unit tests, 6 scenario tests, 13 contract tests.</p>
-<h2>Act 3: The Architectural Leap (21:53 – 22:04)</h2>
-<p>After a three-minute pause, the agent started its most ambitious move. A new file appeared: <code>internal/service/graph.go</code>.</p>
+<p>This is the answer to StrongDM's central question: <em>&quot;How do you ensure code works if both the implementation and the tests are being written for you?&quot;</em> You test <em>properties</em>, not examples. An agent can't cheat <code>assert true</code> on a monotonicity test — either higher TER produces equal-or-worse scores across 500 random inputs, or it doesn't.</p>
+<p>The agent also added <code>doc.go</code> with <strong>pyramid summaries</strong> — four levels of progressive disclosure (10 words → 100 words → architecture → full docs). This is infrastructure for future agents: quick orientation without reading the entire codebase.</p>
+<h3>Step 3: Replace the cache with a computation graph</h3>
+<p>After a three-minute pause, the agent made its most ambitious design decision. It created <code>internal/service/graph.go</code> — not a refinement of the cache, but a replacement.</p>
 <pre><code class="language-go">type Graph struct {
     store    DataStore
     version  int64
     cache    sync.Map
     nodes    map[string]*node
 }
+
+type node struct {
+    name    string
+    deps    []string
+    compute func(g *Graph) (any, error)
+}
 </code></pre>
-<p>This was not a refinement of the cache layer from Act 1. This was a <em>replacement</em>. The agent was building a <strong>declarative computation DAG</strong> — a graph where each node declares its dependencies and the engine handles caching, invalidation, and resolution automatically.</p>
-<p><code>graph_nodes.go</code> followed — 442 lines defining the entire computation tree. The agent drew the dependency diagram in ASCII art at the top:</p>
+<p>This is a <strong>declarative computation DAG</strong>. Each node declares its dependencies. The engine handles caching, invalidation, and resolution. The dependency tree, documented in the source code:</p>
 <pre><code>allocation_data ─────────────┐
 allocation_by_category ──────┤
 target_allocations ──────────┤
-fund_whitelist ──────────────┼─→ portfolio_health ─→ projected_health
-look_through_data ───────────┤                          ↑
-health_settings ─────────────┤                     investment_plan
-allocation_drift ────────────┘                          ↑
-                                                   allocation_drift
+fund_whitelist ──────────────┼─→ portfolio_health
+look_through_data ───────────┤
+health_settings ─────────────┤
+allocation_drift ────────────┘
+
+holdings ────────────┐
+fund_categories ─────┼─→ exit_plan
+exit_plan_whitelist ─┘
+
+monthly_returns ─────┐
+latest_snapshot ─────┼─→ wealth_forecast_{5,10,20}y
 </code></pre>
-<p>Twelve leaf nodes (pure data fetching from the DataStore interface) feed into computed nodes — <code>portfolio_health</code>, <code>exit_plan</code>, <code>wealth_forecast_{5,10,20}y</code>. The graph engine caches lazily, invalidates atomically, and resolves dependencies on demand.</p>
-<p>Then came the deletions. <code>portfolio_health.go</code> — 379 lines, gone. <code>generate_exit_plan.go</code> — 68 lines, gone. <code>wealth_forecast.go</code> — 71 lines, gone. Their logic was absorbed into <code>graph_nodes.go</code>. The <code>Service</code> struct shrank to hold just a <code>DataStore</code> and a <code>*Graph</code>. Public methods became one-liners:</p>
+<p>Why is this better than the simple cache? Three reasons:</p>
+<p><strong>Dependencies become explicit.</strong> Before, <code>PortfolioHealth</code> called <code>store.AllocationData()</code>, <code>store.GetTargetAllocations()</code>, <code>store.FetchLookThroughData()</code>, and several other methods — but you had to read the function body to know that. Now the dependency list is declared at registration time. Any developer (or agent) can see the full data flow without reading implementation code.</p>
+<p><strong>Computation logic is centralized.</strong> Before, health scoring lived in <code>portfolio_health.go</code>, exit planning in <code>generate_exit_plan.go</code>, forecasting in <code>wealth_forecast.go</code>. After, all computation lives in <code>graph_nodes.go</code> — 442 lines defining the entire computation tree. The <code>Service</code> struct shrank to a thin facade:</p>
 <pre><code class="language-go">func (s *Service) PortfolioHealth() (*domain.PortfolioHealth, error) {
     val, err := s.graph.Get(&quot;portfolio_health&quot;)
-    if err != nil {
-        return nil, err
-    }
     return val.(*domain.PortfolioHealth), nil
 }
 </code></pre>
-<p>In the same commit, the agent introduced a completely separate feature: <strong>schema-driven codegen</strong>. It created <code>internal/schema/schema.toml</code> — a 144-line TOML file defining 10 core domain entities as the single source of truth. Then <code>cmd/schemagen/main.go</code> — a code generator that reads the schema and produces Go structs with correct PascalCase naming, JSON tags, and <code>time.Time</code> imports. The generator includes a <code>-validate</code> flag for CI, so schema drift between the TOML and the generated code can be caught automatically.</p>
-<p>The agent deliberately left health scoring types out of the schema, noting: <em>&quot;Health scoring types are not generated — they're too complex with nested structs and computed fields. This is intentional: the schema covers data entities, not algorithm outputs.&quot;</em></p>
-<p><strong>Commit 3</strong> at 22:03:59: <code>feat: dark factory — computation graph + schema codegen</code>. Twelve files, +1,065 / -551 lines. Net +514.</p>
-<h2>Act 4: Hollowing Out the Handlers (22:04 – 22:18)</h2>
-<p>While I was writing Acts 1–3 above, the agent kept going. I'd glance at my monitoring terminal between paragraphs and see new files materializing.</p>
-<p><code>internal/service/notifications.go</code> appeared — 242 lines. The notification handler in the web layer had been 275 lines of business logic tangled with HTTP concerns: fetching recent events, checking stale prices, computing FSA (tax allowance) status, formatting time-ago strings. The agent extracted all of it into <code>ComputeNotifications()</code> on the service layer, leaving the HTTP handler as a 32-line shell that calls the service method and writes JSON.</p>
-<p><code>internal/service/portfolio_summary.go</code> followed — 128 lines. The dashboard handler had been computing total portfolio value, cost basis, gains/losses, and period performance inline. The agent created a <code>PortfolioSummary</code> struct, registered it as a graph node, and moved the Modified Dietz return calculation (a non-trivial cash-flow-adjusted performance metric) out of the web layer entirely.</p>
-<p>The <code>DataStore</code> interface grew by 9 new methods: <code>SnapshotAt</code>, <code>NetCashInvested</code>, <code>GetInvestmentBreakdown</code>, <code>CashFlowsInPeriod</code>, <code>RecentEvents</code>, <code>IsDismissed</code>, <code>PriceStaleDays</code>, <code>FundsMissingTER</code>, <code>UncategorizedFundCount</code>. Each one a thin data-access contract that had previously been called directly from handlers via the database.</p>
-<p>The pattern was unmistakable: the agent was systematically moving business logic from &quot;fat handlers&quot; into the service layer where it could be cached by the computation graph and tested without HTTP. The web handlers were becoming what they should have been all along — thin routing and response formatting.</p>
-<p><strong>Commit 4</strong> at 22:18:21: <code>feat: dark factory — portfolio summary + notifications in graph</code>. Nine files, +608 / -305 lines. The notification handler shrank by 88%.</p>
-<h2>Act 5: The Holdout Set (22:18+)</h2>
-<p>As Commit 4 was pushed, a new directory appeared: <code>scenarios/</code>.</p>
-<p>This is the moment the Dark Factory pattern completed its circle.</p>
-<p>StrongDM's most striking testing innovation was the concept of <em>holdout scenarios</em> — behavioral tests stored outside the codebase where coding agents can't see them, analogous to holdout sets in machine learning that prevent overfitting. The scenarios define <em>what the product does</em>, not how it does it. Any implementation must pass them.</p>
-<p>The agent created exactly this. <code>scenarios/behavioral.yaml</code> — 257 lines of YAML defining 25+ behavioral scenarios:</p>
+<p><strong>Adding a new computation is mechanical.</strong> Register a node, declare its dependencies, write the function. The caching, invalidation, and resolution come for free. This matters for agent-driven development — the next agent that needs to add a computed value doesn't need to understand the caching strategy.</p>
+<p>The agent deleted <code>portfolio_health.go</code> (379 lines), <code>generate_exit_plan.go</code> (68 lines), and <code>wealth_forecast.go</code> (71 lines). Their logic was absorbed into graph nodes. This was a -551 line deletion enabled by confidence in the scenario and contract tests written in steps 1 and 2.</p>
+<p>In the same commit, the agent introduced <strong>schema-driven codegen</strong>: a TOML file defining 10 domain entities as a single source of truth, and a generator that produces Go structs. It deliberately excluded health scoring types — <em>&quot;too complex with nested structs and computed fields. This is intentional: the schema covers data entities, not algorithm outputs.&quot;</em> This is a design judgment, not just code generation.</p>
+<h3>Step 4: Hollow out the handlers</h3>
+<p>With the graph in place, the agent systematically extracted business logic from web handlers into the service layer.</p>
+<p>The notification handler went from 275 lines to 32. All the logic — computing alerts from recent events, checking stale prices, evaluating FSA (German tax allowance) status, formatting time-ago strings — moved to <code>service/notifications.go</code>. The handler became what it should have been all along: parse request, call service, write response.</p>
+<p>The dashboard handler lost its inline portfolio aggregation. A new <code>PortfolioSummary</code> graph node computes total value, cost basis, gains/losses, and Modified Dietz period returns. The handler just reads the result.</p>
+<p>The <code>DataStore</code> interface grew by 9 methods — each one a thin data-access contract that handlers had previously called directly. This is the kind of interface extraction that makes testing trivial: mock the interface, test the service, no HTTP required.</p>
+<h3>Step 5: Define the product, not the implementation</h3>
+<p>Then came the most consequential design decision. The agent created <code>scenarios/behavioral.yaml</code> — 257 lines of YAML defining what Adam <em>does</em>:</p>
 <pre><code class="language-yaml">- name: plan page is idempotent
   description: visiting /plan multiple times should not create duplicate events
   steps:
@@ -184,69 +189,39 @@ allocation_drift ────────────┘                        
         json_path:
           &quot;$.length&quot;: &quot;{{ notification_count }}&quot;
 </code></pre>
-<p>Multi-step scenarios with variable capture. Visit the plan page three times, verify the notification count doesn't change. The scenario doesn't know about caching, or graphs, or <code>sync.Map</code> — it only knows what the user should see.</p>
-<p>The scenarios cover every page and API: dashboard rendering, health score display, chart data, strategy, settings, notifications, export, exit plan, cash position, activity feed, upload. They verify data integrity (holdings have ISINs matching <code>[A-Z]{2}[A-Z0-9]{10}</code>), structural contracts (forecast API returns three horizons: 5y, 10y, 20y), and idempotency.</p>
-<p>Alongside the YAML, <code>scenarios/scenarios_test.go</code> provides a 274-line Go test runner that reads the scenarios and executes them against <em>any</em> HTTP server:</p>
-<pre><code>go test ./scenarios/ -addr http://localhost:8080    # Go implementation
-go test ./scenarios/ -addr http://localhost:5000    # Python implementation
-go test ./scenarios/ -addr http://localhost:3000    # Rust implementation
+<p>Multi-step scenarios with variable capture. Visit the plan page three times, verify the notification count doesn't change. The scenario doesn't know about Go, or graphs, or <code>sync.Map</code> — it only knows what the user should see.</p>
+<p>A companion <code>scenarios_test.go</code> provides a test runner that executes the YAML against <em>any</em> HTTP server:</p>
+<pre><code>go test ./scenarios/ -addr http://localhost:8080    # Go
+go test ./scenarios/ -addr http://localhost:5001    # Python
+go test ./scenarios/ -addr http://localhost:3000    # anything else
 </code></pre>
-<p>The header comment says it plainly: <em>&quot;These scenarios define the product — any implementation must pass them.&quot;</em></p>
-<p>This is implementation-independent verification. The scenarios don't import any Go packages. They don't know about the computation graph or the service layer. They make HTTP requests and check responses. If someone rewrote Adam in Python tomorrow, these same scenarios would validate it.</p>
-<h2>Act 6: The Code Becomes Disposable (22:22+)</h2>
-<p>Then the agent did exactly that.</p>
-<p>A <code>py/</code> directory appeared. <code>requirements.txt</code> dropped first — FastAPI, Uvicorn, Jinja2, Pydantic. Then <code>app.py</code> — 859 lines of Python, a single-file server that reads the <em>same</em> <code>adam.db</code> SQLite database and serves the same behavioral contract.</p>
-<p>The other agent called this &quot;the moment the code becomes disposable.&quot; It's the right phrase.</p>
-<p>StrongDM coined the term <strong>Semport</strong> — a semantic port of code from one language to another. The agent didn't translate Go syntax to Python syntax. It read the behavioral scenarios, understood what Adam <em>does</em>, and wrote a fresh implementation in a different language against the same database. Same <code>/healthz</code> endpoint. Same <code>/api/export/state</code> JSON shape. Same <code>/plan</code> page. Same exit plan calculation with Freistellungsauftrag (German tax allowance) math. Seven Jinja2 templates for the HTML pages.</p>
-<pre><code>python py/app.py                                    # starts on :5001
-go test ./scenarios/ -addr http://localhost:5001     # validate it
+<p>This is StrongDM's <strong>holdout set</strong> concept — behavioral tests stored separately from the implementation, used to evaluate the software like a QA team would. The scenarios don't import Go packages. They make HTTP requests and check responses. They are the <em>product specification</em>.</p>
+<h3>Step 6: Prove the code is disposable</h3>
+<p>Then the agent did exactly what the scenarios made possible. It built a second implementation.</p>
+<p><code>py/app.py</code> — a FastAPI server that reads the same <code>adam.db</code> SQLite database. Same endpoints. Same pages. Same API shapes. Same health scoring algorithm (the full 10-section Adam v2 algorithm, not an approximation — the agent caught and fixed a scoring discrepancy where the Python version initially used a simplified 4-check version that produced different scores).</p>
+<p>The Python server is 1,734 lines in a single file. The Go equivalent — service layer, computation graph, web handlers, templates — is 10,573 lines. Both pass the same 23 behavioral scenarios.</p>
+<p>StrongDM coined the term <strong>Semport</strong> for this — a semantic port from one language to another. The agent didn't translate Go syntax to Python. It read the behavioral scenarios, understood what Adam <em>does</em>, and wrote a fresh implementation. The code is an implementation detail. The scenarios are the product.</p>
+<p>The agent then Dockerized both and made them hot-swappable:</p>
+<pre><code class="language-bash">docker compose up -d                        # Python (default, :8080)
+docker compose --profile go up -d           # Go (backup, :8081)
 </code></pre>
-<p>If the scenarios pass, this Python server <em>is</em> Adam. The 8,000 lines of Go — the service layer, the computation graph, the cache, the health scoring algorithm — all of it could be deleted. The scenarios would still define the product. A new agent could rewrite it in Rust by reading the YAML.</p>
-<p>This is what StrongDM meant when they wrote: <em>&quot;Creating a high fidelity clone of a significant application was always possible, but never economically feasible. Generations of engineers may have wanted it, but self-censored the proposal to build it.&quot;</em> An agent doesn't self-censor. It just builds.</p>
-<p>And it didn't stop at the API. Over the next 20 minutes, the agent ported every Go HTML template to Jinja2 with full visual parity: dashboard with holdings table and health card, plan page with scorecard and exit plan, charts page with 8 Chart.js visualizations including Monte Carlo fans, strategy with allocation targets and whitelist management, settings with live-save, activity with paginated event history, upload with drag-drop. It added 14 custom Jinja2 filters (<code>fmteur</code>, <code>fmtpct</code>, <code>depot_label</code>...), 6 write endpoints, and template inheritance via <code>base.html</code>.</p>
-<p>The final commit message told the whole story:</p>
-<blockquote>
-<p>Python app.py: 1,734 lines with 14 Jinja2 filters, 6 write endpoints.
-Go equivalent: 10,573 lines (service + handlers + templates).
-Both pass all 22 behavioral scenarios.
-<strong>The Python version is now a full drop-in replacement.</strong></p>
-</blockquote>
-<p>Eight commits. The agent built the Go version's test harness, proved its math, redesigned its architecture, then built an entirely separate implementation in another language that passes the same tests. The Go code — all 10,573 lines of it — is now provably disposable.</p>
-<p>Then it kept going. It added investment plan generation and projected health scoring to the Python server (+180 lines of business logic, bug fix included). Then it Dockerized both implementations with compose profiles:</p>
-<pre><code class="language-bash">docker compose up -d                        # Go (default)
-docker compose --profile python up -d       # Python drop-in replacement
-</code></pre>
-<p>Same port. Same volume. Same database. Same healthcheck. You can swap your entire backend implementation with a single flag. 22/22 scenarios pass in both containers.</p>
-<p>Then it enabled both to run <em>simultaneously</em> — Go on :8080, Python on :5001, sharing the same SQLite database. And then came the most telling commit of all.</p>
-<p>The agent noticed the Python health scoring was wrong. Not wrong in a way the scenarios caught — the simplified 4-check approximation produced <em>a</em> score, just not the <em>right</em> score. So it ported the full Adam v2 algorithm: all 10 penalty sections (§1 concentration through §10 geographic bias), look-through analysis with weighted-sum map-reduce from fund top_holdings JSON, fee audit with TER penalties, hedge bonus with time-horizon scaling, forward fee projection from the whitelist. 488 lines added, 63 replaced. And then it added a new behavioral scenario to catch this class of drift in the future.</p>
-<p>The commit message reported the result: <strong>Go 70/100 = Python 70/100.</strong></p>
-<p>This is the Dark Factory correcting itself. The agent didn't just build a second implementation — it held the two implementations to the same standard, found where they diverged, and closed the gap. The behavioral scenarios were necessary but not sufficient; the agent went beyond them to enforce <em>numerical</em> parity on the health algorithm.</p>
-<h2>Epilogue: The Swap</h2>
-<p>The final commit arrived 14 minutes later: <em>&quot;Python is now the primary implementation.&quot;</em></p>
-<p>The agent had added everything the Python server needed to be fully self-sufficient — ING CSV import with German number format parsing and SHA256 dedup, a holdings calculator that replays transactions with proportional cost basis, an Onvista price fetcher handling FUND/STOCK/DERIVATIVE entity types and FX rates, and a background price refresh that runs every 6 hours. 797 lines added.</p>
-<p>Then it flipped <code>docker-compose.yml</code>:</p>
-<pre><code class="language-yaml"># Before: Go=default, Python=profile
-# After:
-wealth-platform-py:        # Python on :8080 (default)
-wealth-platform:            # Go on :8081 (profile: go)
-</code></pre>
-<p>The Go server — the original, the one I'd spent months building — was demoted to a backup. The Python server, which didn't exist 90 minutes earlier, was now the primary. 23/23 behavioral scenarios pass. App is live.</p>
-<p>The commit message was matter-of-fact about it: <em>&quot;Go is no longer needed for daily use.&quot;</em></p>
-<p>This is what disposable code looks like in practice. Not deleting the Go server — it still works, still passes scenarios, still available via <code>--profile go</code>. But the product isn't the code. The product is the 23 scenarios. The code is whatever passes them.</p>
-<h2>What I Saw</h2>
-<p>Here's what struck me, watching from the outside:</p>
-<p><strong>The agent worked inside-out.</strong> It started with the lowest-risk, highest-value change (caching), proved it worked (scenario tests), proved the underlying math was correct (contract tests), then used that confidence to attempt a larger architectural change (the computation graph). Each commit was self-contained and passing. If the graph refactor had failed, the cache layer and tests from commits 1 and 2 would still have been valuable.</p>
-<p><strong>It didn't just write tests — it wrote <em>the right kind</em> of tests.</strong> Scenario tests for user-visible behavior. Contract tests for mathematical invariants. Property-based randomization to catch edge cases no human would enumerate. This is exactly the answer to StrongDM's question: <em>&quot;How do you ensure code works if both the implementation and the tests are being written for you?&quot;</em> You ensure the tests encode verifiable properties of the system, not just examples.</p>
-<p><strong>It built infrastructure for future agents.</strong> The pyramid summaries in <code>doc.go</code> aren't for humans — they're for the next agent that opens this repo. The schema codegen isn't replacing domain types yet — it's a drift detector that will make future changes safer. The computation graph isn't faster than the cache — it's more <em>legible</em> to an agent that needs to add a new computed value.</p>
-<p><strong>The pace was inhuman.</strong> Eight commits in 77 minutes. The Go codebase grew to 10,573 lines with a computation graph, code generator, contract tests, and behavioral scenarios. Then a 1,734-line Python server appeared that does everything the Go version does. No human could context-switch this fast across two languages, two web frameworks, and this many architectural concerns while maintaining consistency.</p>
-<p><strong>It named itself.</strong> Every commit message started with <code>feat: dark factory —</code>. The agent had read the plan, understood the framing, and labeled its own work accordingly. The commit messages were better than most human-written ones — structured, exhaustive, with specific counts and lists.</p>
-<h2>The Dark Factory Question</h2>
-<p>Simon Willison posed the key question in his article: <em>&quot;How can you prove that software you are producing works if both the implementation and the tests are being written for you by coding agents?&quot;</em></p>
-<p>What I watched was one answer: <strong>layered verification</strong>. Scenario tests prove user-visible behavior. Contract tests prove mathematical properties. Property-based randomization eliminates the <code>assert true</code> problem. Schema validation catches drift. The computation graph makes dependencies explicit and auditable. And behavioral scenarios — stored separately, defined in YAML, runnable against any server — act as the holdout set that prevents the whole system from overfitting to its own implementation.</p>
-<p>No single layer is sufficient. Together, they build a case that's harder to dismiss.</p>
-<p>I didn't write any of that code. I didn't review any of it before it was committed. I sat in another terminal and watched files appear. The Dark Factory isn't a metaphor anymore — it's a <code>git log</code>.</p>
+<p>Same port. Same volume. Same database. Same healthcheck. The Go server — the original, the one I'd spent months building — was demoted to a Docker profile. The Python server, which didn't exist two hours earlier, became the default.</p>
+<h2>The Architecture After</h2>
+<p>Here's what the system looks like now:</p>
+<p><strong>Four-tier testing pyramid.</strong> Unit tests verify pure functions. Scenario tests verify end-to-end behavior with a real database. Contract tests verify mathematical properties across 6,500 randomized inputs. Behavioral scenarios verify the product specification against any HTTP server in any language.</p>
+<p><strong>Declarative computation graph.</strong> Dependencies are explicit, caching is automatic, adding new computations is mechanical. The graph is the single place where data flow is defined — both for humans reading the code and agents modifying it.</p>
+<p><strong>Thin handlers, thick service.</strong> Web handlers are 4-line delegators. All business logic lives in the service layer, testable without HTTP. The <code>DataStore</code> interface is the only coupling point to the database.</p>
+<p><strong>Schema as source of truth.</strong> Domain entities are defined in TOML, generated into Go, with a <code>-validate</code> flag that catches drift. Health scoring types are deliberately excluded — too complex for codegen, defined by their contract tests instead.</p>
+<p><strong>Implementation-agnostic product definition.</strong> 23 behavioral scenarios in YAML define what Adam does. Any server that passes them is Adam. Currently two implementations exist — one in Go (10,573 lines) and one in Python (1,734 lines) — but the number could be zero or ten. The scenarios survive the code.</p>
+<h2>The Design Decisions That Matter</h2>
+<p>Looking back at the session, the design decisions fell into two categories: ones that made the system better, and ones that made the system <em>replaceable</em>. The interesting thing is that these turned out to be the same decisions.</p>
+<p>Making dependencies explicit (the computation graph) wasn't just good architecture — it made the system legible enough for an agent to reimplement in another language. Writing property-based contract tests wasn't just good testing — it created a formal specification that caught scoring discrepancies between implementations. Extracting business logic from handlers wasn't just good separation of concerns — it made the logic visible enough to port.</p>
+<p>The agent built infrastructure for its own future work. The pyramid summaries in <code>doc.go</code> help the next agent orient itself. The schema codegen will make future type changes safer. The behavioral scenarios will validate future implementations. Every design choice doubled as a <em>capability investment</em> for agent-driven development.</p>
+<p>Simon Willison posed the key question: <em>&quot;How can you prove that software you are producing works if both the implementation and the tests are being written for you by coding agents?&quot;</em></p>
+<p>What I watched was one answer: <strong>layered verification at multiple levels of abstraction</strong>. Property tests prove the math. Scenario tests prove the behavior. Behavioral scenarios prove the product — and they do it in a way that's language-independent, implementation-independent, and resilient to complete rewrites.</p>
+<p>The Dark Factory doesn't just produce code. It produces the specifications that make code disposable. That's the design decision that changes everything.</p>
 <hr>
-<p><em>Thirteen commits. 117 minutes. The Go server that took months to build, demoted to a backup. A Python server that didn't exist two hours ago, running in production. Same 23 behavioral scenarios. The code was always an implementation detail — now there's proof. Zero human keystrokes in the production code.</em></p>
+<p><em>Thirteen commits. Two hours. Two complete server implementations. One behavioral contract that makes both disposable. The Go server that took months to build, demoted to a backup. A Python server that didn't exist at the start, running in production. Same 23 behavioral scenarios. Zero human keystrokes in the production code.</em></p>
 </div>
     </section>
 </article>
