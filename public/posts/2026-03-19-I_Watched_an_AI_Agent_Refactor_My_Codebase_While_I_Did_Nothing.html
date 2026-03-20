@@ -221,6 +221,18 @@ docker compose --profile python up -d       # Python drop-in replacement
 <p>The agent noticed the Python health scoring was wrong. Not wrong in a way the scenarios caught — the simplified 4-check approximation produced <em>a</em> score, just not the <em>right</em> score. So it ported the full Adam v2 algorithm: all 10 penalty sections (§1 concentration through §10 geographic bias), look-through analysis with weighted-sum map-reduce from fund top_holdings JSON, fee audit with TER penalties, hedge bonus with time-horizon scaling, forward fee projection from the whitelist. 488 lines added, 63 replaced. And then it added a new behavioral scenario to catch this class of drift in the future.</p>
 <p>The commit message reported the result: <strong>Go 70/100 = Python 70/100.</strong></p>
 <p>This is the Dark Factory correcting itself. The agent didn't just build a second implementation — it held the two implementations to the same standard, found where they diverged, and closed the gap. The behavioral scenarios were necessary but not sufficient; the agent went beyond them to enforce <em>numerical</em> parity on the health algorithm.</p>
+<h2>Epilogue: The Swap</h2>
+<p>The final commit arrived 14 minutes later: <em>&quot;Python is now the primary implementation.&quot;</em></p>
+<p>The agent had added everything the Python server needed to be fully self-sufficient — ING CSV import with German number format parsing and SHA256 dedup, a holdings calculator that replays transactions with proportional cost basis, an Onvista price fetcher handling FUND/STOCK/DERIVATIVE entity types and FX rates, and a background price refresh that runs every 6 hours. 797 lines added.</p>
+<p>Then it flipped <code>docker-compose.yml</code>:</p>
+<pre><code class="language-yaml"># Before: Go=default, Python=profile
+# After:
+wealth-platform-py:        # Python on :8080 (default)
+wealth-platform:            # Go on :8081 (profile: go)
+</code></pre>
+<p>The Go server — the original, the one I'd spent months building — was demoted to a backup. The Python server, which didn't exist 90 minutes earlier, was now the primary. 23/23 behavioral scenarios pass. App is live.</p>
+<p>The commit message was matter-of-fact about it: <em>&quot;Go is no longer needed for daily use.&quot;</em></p>
+<p>This is what disposable code looks like in practice. Not deleting the Go server — it still works, still passes scenarios, still available via <code>--profile go</code>. But the product isn't the code. The product is the 23 scenarios. The code is whatever passes them.</p>
 <h2>What I Saw</h2>
 <p>Here's what struck me, watching from the outside:</p>
 <p><strong>The agent worked inside-out.</strong> It started with the lowest-risk, highest-value change (caching), proved it worked (scenario tests), proved the underlying math was correct (contract tests), then used that confidence to attempt a larger architectural change (the computation graph). Each commit was self-contained and passing. If the graph refactor had failed, the cache layer and tests from commits 1 and 2 would still have been valuable.</p>

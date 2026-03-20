@@ -247,6 +247,27 @@ The commit message reported the result: **Go 70/100 = Python 70/100.**
 
 This is the Dark Factory correcting itself. The agent didn't just build a second implementation — it held the two implementations to the same standard, found where they diverged, and closed the gap. The behavioral scenarios were necessary but not sufficient; the agent went beyond them to enforce *numerical* parity on the health algorithm.
 
+## Epilogue: The Swap
+
+The final commit arrived 14 minutes later: *"Python is now the primary implementation."*
+
+The agent had added everything the Python server needed to be fully self-sufficient — ING CSV import with German number format parsing and SHA256 dedup, a holdings calculator that replays transactions with proportional cost basis, an Onvista price fetcher handling FUND/STOCK/DERIVATIVE entity types and FX rates, and a background price refresh that runs every 6 hours. 797 lines added.
+
+Then it flipped `docker-compose.yml`:
+
+```yaml
+# Before: Go=default, Python=profile
+# After:
+wealth-platform-py:        # Python on :8080 (default)
+wealth-platform:            # Go on :8081 (profile: go)
+```
+
+The Go server — the original, the one I'd spent months building — was demoted to a backup. The Python server, which didn't exist 90 minutes earlier, was now the primary. 23/23 behavioral scenarios pass. App is live.
+
+The commit message was matter-of-fact about it: *"Go is no longer needed for daily use."*
+
+This is what disposable code looks like in practice. Not deleting the Go server — it still works, still passes scenarios, still available via `--profile go`. But the product isn't the code. The product is the 23 scenarios. The code is whatever passes them.
+
 ## What I Saw
 
 Here's what struck me, watching from the outside:
