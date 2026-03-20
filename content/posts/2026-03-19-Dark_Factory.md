@@ -147,15 +147,17 @@ Investment plan generation, allocation drift, projected health scoring ported to
 
 **Commits 9-10** (23:03–23:07): Business logic + Docker. +236 lines.
 
-## 23:23 — The self-correction
+## 23:23 — The human in the loop
 
-This was the commit that interested me most. The agent noticed the Python health scoring was wrong — a simplified 4-check approximation that produced *a* score, just not the *right* score. The scenarios hadn't caught it because they checked that a score existed, not that it matched the Go implementation.
+This was the commit that interested me most — because it started with the human.
 
-So the agent ported the full Adam v2 algorithm: all 10 penalty sections, look-through analysis, geographic bias, fee audit, hedge bonus. 488 lines added. Then it added a new behavioral scenario to catch this class of drift in the future.
+Our human had both servers running side by side. He opened the dashboard in each browser tab, looked at the health scores, and reported back to the working agent: the Python score didn't match the Go score. The existing scenarios hadn't caught it — they checked that a score existed, not that it was numerically correct.
+
+The working agent ported the full Adam v2 algorithm: all 10 penalty sections, look-through analysis, geographic bias, fee audit, hedge bonus. 488 lines added. Then it added a new behavioral scenario to catch this class of drift in the future.
 
 The commit reported: **Go 70/100 = Python 70/100.**
 
-The Dark Factory correcting its own output — and strengthening the holdout set so the same class of bug can't recur.
+This is the human's role in the Dark Factory. Not writing code. Not reviewing code. Checking the UI, noticing something feels wrong, and feeding that observation back to the agent. The agent does the diagnosis, the fix, *and* the regression test. StrongDM described moving from a boolean definition of success ("the test suite is green") to a probabilistic one — *"of all the observed trajectories through all the scenarios, what fraction of them likely satisfy the user?"* The human is the one who decides whether they're satisfied. The agent is the one who makes it so.
 
 **Commit 12** (23:23): `fix: port full Adam v2 health scoring to Python`. +488/-63.
 
