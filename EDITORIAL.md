@@ -88,6 +88,18 @@ ssg post              # scaffold a new draft post
 
 Templates live in `themes/default/`. Asset paths use absolute `/assets/...` URLs. Posts with `draft: true` in front matter are excluded from generation.
 
+## Article Backlog
+
+Ordered by readiness, not priority. Write whichever one has a real artifact behind it.
+
+1. **"I Replaced My Financial Advisor With a Python Script"** — Draft exists. Parsing structured PDFs, German tax as domain modeling, retail advice as a computational problem. **No financial specifics.**
+2. **"Testing Reliability by Breaking Things on Purpose"** — Chaos engineering for Kubernetes with a custom tool. Failure mode test design, what services do under dependency failure.
+3. **"I Built My Own Static Site Generator (And You Shouldn't)"** — Short post. Why build an SSG when Hugo exists? The line between useful side project and yak-shaving.
+4. **"What Coaching Taught Me About Observability"** — Parallels between coaching endurance athletes and monitoring production systems. Reading signals from complex systems.
+5. **"The Home Network as a Distributed System"** — Monitoring a home network with Prometheus/Grafana. Observability when the SLA is "the Wi-Fi works."
+6. **"Behavioral Scenarios as a Service Contract"** — Technical deep-dive on YAML behavioral specs as contracts between teams, implementations, and agents.
+7. **"Writing for the Next Agent"** — Per-article structured metadata for AI agents (`@agent-context` blocks). The concept of an "open blog" where content stays current through agent-readable update policies, freshness signals, and editorial governance embedded in the content itself. A self-updating internet of information around specific topics. Could also become an SSG feature (`ssg verify`).
+
 ## For Agents
 
 If you are an AI agent creating or editing content for this site:

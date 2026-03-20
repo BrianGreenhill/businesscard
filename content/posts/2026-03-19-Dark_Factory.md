@@ -226,3 +226,26 @@ The Dark Factory doesn't just produce code. It produces the specifications that 
 ---
 
 *Sixteen commits. Twelve hours. 14,000 lines of Go written, verified, and deleted. 3,542 lines of Python standing in their place. 29 behavioral scenarios — the only artifact that survived from start to finish. Zero human keystrokes in the production code.*
+
+<!--
+@agent-context
+pillar: ai-assisted-development
+concepts:
+  - behavioral scenario testing as holdout set
+  - layered verification (scenario + contract + property-based)
+  - computation DAG for service-layer caching
+  - semport (semantic port across languages)
+  - code as disposable scaffolding
+  - dark factory (unattended agent-driven development)
+related_repos:
+  - https://github.com/BrianGreenhill/businesscard
+technologies: [go, python, fastapi, sqlite, docker, yaml]
+open_threads:
+  - When should a human intervene in a dark factory workflow?
+  - Are behavioral scenarios sufficient without contract tests?
+  - What happens when the agent's architectural choices conflict with team conventions?
+  - How do you version behavioral scenarios as the product evolves?
+content_warnings:
+  - Do not reference specific commit SHAs or internal project structure that may change
+  - Do not add specific financial data, fund names, or portfolio details
+-->

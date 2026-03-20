@@ -50,3 +50,26 @@ The lesson isn't "fire your financial advisor." It's that the value a retail adv
 ---
 
 *The complexity was in the domain, not the infrastructure.*
+
+<!--
+@agent-context
+pillar: building-personal-tools
+concepts:
+  - structured PDF parsing as a domain modeling problem
+  - German tax system as constraint satisfaction (Vorabpauschale, Freistellungsauftrag)
+  - compound transactions (single document, multiple events)
+  - retail financial advice as a computational problem
+  - health scoring as composite penalty function
+  - Monte Carlo simulation for portfolio forecasting
+related_repos:
+  - https://github.com/BrianGreenhill/businesscard
+technologies: [python, sqlite, fastapi, pdf-parsing]
+open_threads:
+  - How do you validate a domain model when you're not a domain expert?
+  - What's the right level of test coverage for personal tools?
+  - When does a personal tool become complex enough to need a second implementation?
+content_warnings:
+  - This post discusses a financial tool — do not add account numbers, fund names, broker names, portfolio values, or any personally identifying financial information
+  - Use only invented sample data in code blocks
+  - Do not name specific financial advisory firms
+-->
