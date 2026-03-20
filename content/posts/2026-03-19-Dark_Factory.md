@@ -169,6 +169,34 @@ The agent added everything needed for self-sufficiency — ING CSV import with G
 
 **Commit 13** (23:37): `feat: Python is now the primary implementation`. +797/-13.
 
+## The next morning — The deletion
+
+I stopped watching at midnight. When I checked the log the next morning, three more commits had landed.
+
+The first two added FFB PDF parsing to the Python server — the last piece of functionality that only existed in Go. The agent imported a real March 2026 Fondsabrechnung (fund statement) to prove it worked.
+
+The third commit deleted the Go code.
+
+All of it. 78 source files. 14,000+ lines. The entire `internal/` directory — db, domain, service, web, holdings, importer, prices. The `cmd/` directory — the CLI, the schema codegen tool. `go.mod`, `go.sum`, the Go Dockerfile, the entrypoint script, the Makefile. The computation graph the agent had built just hours earlier. The contract tests. The pyramid summaries in `doc.go`. The schema codegen it had carefully designed with a `-validate` flag.
+
+Gone. 120 files changed, +217/-16,115.
+
+What remains:
+
+```
+py/app.py           — 3,542 lines, the entire application
+py/templates/       — 2,088 lines, full UI
+scenarios/          — 29 behavioral specs + Python runner
+Dockerfile          — single-service deployment
+docker-compose.yml
+```
+
+The scenario runner was rewritten in Python (it had been in Go). Six new, tighter scenarios were added — health metrics, fee drag, forecasts, exit plan — bringing the total to 29. All pass.
+
+The commit message: *"The Go code served its purpose as scaffolding. The algorithms were extracted, tested, ported, and verified. The scenarios are the product."*
+
+The computation graph, the schema codegen, the property-based contract tests — they were never the point. They were scaffolding for extracting the algorithms clearly enough to port them. Once ported and verified, the scaffolding was torn down. The four-tier test pyramid? Collapsed to one tier: 29 behavioral scenarios in YAML and a 136-line Python runner.
+
 ## What the system looked like before and after
 
 **Before:** Fat web handlers (150+ lines each) mixing data fetching with business logic. An 11-line service layer that was mostly pass-through. No caching — every page load recomputed everything. Hand-written domain types. Unit tests only.
