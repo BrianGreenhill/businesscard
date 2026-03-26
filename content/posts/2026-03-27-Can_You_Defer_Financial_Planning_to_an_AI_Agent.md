@@ -25,47 +25,35 @@ The common cases are straightforward. A buy is a date, a fund, an amount, a pric
 
 These aren't hard computer science problems. They're hard *domain* problems — and they're invisible if you only look at the summary page.
 
-## What the Tool Computes
+## What the Tool Does
 
-Once the parser can reconstruct a portfolio from statements, the tool scores it. The health score starts at 100 and applies penalties across ten sections — each measuring a different dimension of portfolio risk:
+Once the parser can reconstruct a portfolio from statements, the tool scores it. A health score starts at 100 and applies penalties across ten dimensions — concentration, fee drag, complexity, fund overlap, geographic bias, and others.
 
-**Concentration.** Not at the fund level — at the *underlying company* level. The tool looks through each ETF or fund to its constituents, weights them by portfolio allocation, and flags when the top three companies across all holdings exceed a threshold. A portfolio with one broad-market ETF holding 500 companies scores well here. A portfolio with five ETFs that all hold the same top-ten companies doesn't.
+The most interesting design decision was where to measure concentration. Not at the fund level — at the *underlying company* level. The tool looks through each ETF to its constituents, weights them by portfolio allocation, and flags when the top three companies across all holdings exceed a threshold. A portfolio with one broad-market ETF holding 500 companies scores well. A portfolio with five ETFs that all hold the same top-ten companies doesn't — even though it looks diversified on paper.
 
-**Fee drag.** Weighted average TER across all positions, benchmarked against low-cost passive indexes. The tool computes the annual fee in absolute terms and the potential savings from switching to lower-cost alternatives. High-TER active funds are the first candidates for the exit plan.
+The other deliberate constraint: the portfolio should be manageable by someone without a deep financial background. That's why the scoring penalizes complexity — the number of distinct positions. The tool wasn't just optimizing for returns. It was optimizing for comprehensibility.
 
-**Complexity.** The number of distinct positions in the portfolio. The tool treats simplification as a goal — fewer positions means easier rebalancing, lower transaction costs, and less cognitive overhead. Above a configurable threshold, the score drops.
-
-**Overlap.** What percentage of underlying companies appear in more than one fund? Redundant holdings mean you're paying multiple expense ratios for the same exposure.
-
-**Geographic bias.** The split between US and non-US equity exposure, measured against a configurable baseline. Drift beyond a threshold costs points.
-
-**Strategy and fund whitelisting.** Funds can be whitelisted — marked as core holdings to retain. The tool tracks allocation targets across categories and detects drift. Everything not on the whitelist becomes a candidate for the exit plan, prioritized by fee drag.
-
-**Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. The exit plan staggers sales across years to maximize that allowance — splitting non-whitelisted funds into immediate sales, next-year sales (to use next year's allowance), and notice-period sales. The tool tracks how much allowance remains and how much tax the staggering saves.
-
-**Monte Carlo forecasting.** Percentile bands across 5, 10, and 20-year horizons, using historical volatility from the actual fund universe. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
-
-The scoring philosophy is grounded in passive indexing, broad diversification, and low fees — but also in a deliberate constraint I gave it: the portfolio should be manageable by someone without a deep financial background. That constraint is why complexity is penalized. The tool wasn't just optimizing for returns — it was optimizing for comprehensibility.
-
-The intellectual lineage isn't obscure. The fee drag penalty follows Bogle's argument that [costs are the most reliable predictor of fund performance](https://www.wiley.com/en-us/The+Little+Book+of+Common+Sense+Investing%3A+The+Only+Way+to+Guarantee+Your+Fair+Share+of+Stock+Market+Returns-p-9781119404507) — backed by the [SPIVA Scorecards](https://www.spglobal.com/spdji/en/research-insights/spiva/), which consistently show most active funds underperforming their benchmarks after fees. The diversification scoring draws on Markowitz's [portfolio selection](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1540-6261.1952.tb01525.x) framework. The simplification constraint echoes Malkiel's case in *A Random Walk Down Wall Street* for simple index portfolios — and [DeMiguel, Garlappi & Uppal's finding](https://doi.org/10.1093/rfs/hhm075) that naive equal-weight strategies often outperform complex optimized ones. The commodity hedge allocation takes a cue from Dalio's [All Weather](https://www.bridgewater.com/research-and-insights/the-all-weather-story) concept. None of this is novel. The tool just applies it mechanically.
+Beyond scoring, the tool whitelists funds to retain, detects allocation drift, generates tax-optimized exit plans that stagger sales across years to maximize Germany's annual capital gains allowance, and runs Monte Carlo forecasts across 5, 10, and 20-year horizons.
 
 ## What the Tool Found
 
 The portfolio I started with had over thirty individual positions — a mix of actively managed funds, ETFs, bonds, and other products accumulated over years of professional advice. The tool scored it poorly. High overlap between funds holding the same underlying companies. Elevated fee drag from active management. Complexity well above the threshold for practical self-management.
 
-The tool's recommendation was drastic simplification: reduce to fewer than five positions anchored around a low-cost passive index core, with a small satellite allocation for commodity hedges as an inflation buffer. The exit plan staggered the liquidation of non-whitelisted funds across tax years to maximize the annual capital gains allowance.
+The recommendation was drastic simplification: reduce to fewer than five positions anchored around a low-cost passive index core, with a small satellite allocation for commodity hedges as an inflation buffer. The exit plan staggered the liquidation across tax years to maximize the annual capital gains allowance.
 
-The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically. Broad diversification through a single low-cost index fund. Minimal overlap. Low fees. Geographic balance. These aren't secrets. They're the consensus view. The tool just made the gap between where the portfolio was and where the literature says it should be impossible to ignore.
+The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically and the gap between where the portfolio was and where those principles say it should be was wider than I expected.
 
-## What Kind of Advisor Is This?
+## What Kind of Strategy Is This?
 
-In financial planning literature, the strategy the tool recommends has a name: [passive core-satellite](https://www.pm-research.com/content/iijpormgmt/31/1/64). A large core allocation in a broad, low-cost index fund provides market-rate returns and diversification. Small satellite positions — in this case, commodity hedges — target specific risks the core doesn't cover, like inflation.
+I didn't set out to implement a specific financial framework. But the strategy the tool converged on has a name in the literature: [passive core-satellite](https://www.pm-research.com/content/iijpormgmt/31/1/64). A large core allocation in a broad, low-cost index fund provides market-rate returns and diversification. Small satellite positions — in this case, commodity hedges — target specific risks the core doesn't cover, like inflation.
 
-This isn't a patchwork. It's an [established framework](https://climateinstitute.edhec.edu/publications/revisiting-core-satellite-investing-dynamic-model-relative-risk-management) studied by Amenc, Malaise, and Martellini (2004) and adopted by institutional investors and robo-advisors alike. Vanguard publishes [model portfolios](https://www.vanguard.com.au/adviser/invest/model-portfolios/resources) built on the same structure. The approach is well-supported for managing cost and relative risk — the core controls expenses and benchmark tracking, the satellites allow targeted exposure without putting the whole portfolio at risk.
+This is an [established framework](https://climateinstitute.edhec.edu/publications/revisiting-core-satellite-investing-dynamic-model-relative-risk-management), studied by Amenc, Malaise, and Martellini (2004) and adopted by institutional investors and robo-advisors alike. Vanguard publishes [model portfolios](https://www.vanguard.com.au/adviser/invest/model-portfolios/resources) built on the same structure. The approach is well-supported for managing cost and relative risk — the core controls expenses and benchmark tracking, the satellites allow targeted exposure without putting the whole portfolio at risk.
+
+The individual scoring penalties have their own lineage. The fee drag penalty follows Bogle's argument that [costs are the most reliable predictor of fund performance](https://www.wiley.com/en-us/The+Little+Book+of+Common+Sense+Investing%3A+The+Only+Way+to+Guarantee+Your+Fair+Share+of+Stock+Market+Returns-p-9781119404507) — backed by the [SPIVA Scorecards](https://www.spglobal.com/spdji/en/research-insights/spiva/), which consistently show most active funds underperforming their benchmarks after fees. The diversification scoring draws on Markowitz's [portfolio selection](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1540-6261.1952.tb01525.x) framework. The simplification constraint echoes Malkiel's case in *A Random Walk Down Wall Street* for simple index portfolios — and [DeMiguel, Garlappi & Uppal's finding](https://doi.org/10.1093/rfs/hhm075) that naive equal-weight strategies often outperform complex optimized ones. The commodity hedge allocation takes a cue from Dalio's [All Weather](https://www.bridgewater.com/research-and-insights/the-all-weather-story) concept.
+
+None of this is novel. What surprised me is that I didn't design toward core-satellite intentionally — the scoring algorithm arrived there by applying these principles independently. Fee penalties push toward low-cost index funds. Complexity penalties push toward fewer positions. Overlap penalties push toward consolidation. The result is core-satellite not because I told the tool to build one, but because that's what the literature's consensus looks like when you enforce it mechanically.
 
 The honest limitation: core-satellite doesn't protect against absolute market downturns. If the broad market drops, the core drops with it. The commodity satellites may buffer some of that, but they're a small allocation by design. The tool doesn't pretend otherwise — the Monte Carlo forecasting shows the full distribution, including the downside tails.
-
-So what the tool amounts to, in financial planning terms, is a mechanical implementation of a well-known strategy — one that a human advisor might also recommend, but that the tool enforces with scoring penalties instead of judgment calls. The difference isn't the strategy. It's that the tool makes the reasoning auditable and the execution systematic.
 
 ## How It Was Built
 
