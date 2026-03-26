@@ -31,9 +31,11 @@ Once the parser can reconstruct a portfolio from statements, the interesting que
 
 **Health scoring.** A composite score from penalty sections — concentration risk, fee drag via TER analysis, geographic bias through look-through analysis of underlying holdings, category diversification. The score is a function of the portfolio state. It changes when the data changes.
 
-**Monte Carlo forecasting.** Percentile bands across multiple time horizons, using historical volatility from the actual fund universe rather than generic assumptions. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
+**Strategy and fund whitelisting.** The tool tracks allocation targets across categories and detects drift from those targets. Funds can be whitelisted — marked as core holdings to retain. Everything else becomes a candidate for the exit plan. This is the foundation the rest of the analysis builds on: which funds stay, which go, and what the target allocation looks like.
 
-**Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. An optimal exit plan staggers sales across years to maximize that allowance. This is a constraint satisfaction problem — well suited to a script that can explore the full solution space.
+**Monte Carlo forecasting.** Percentile bands across 5, 10, and 20-year horizons, using historical volatility from the actual fund universe rather than generic assumptions. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
+
+**Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. The exit plan staggers sales across years to maximize that allowance — splitting non-whitelisted funds into immediate sales, next-year sales (to use next year's allowance), and notice-period sales. The tool tracks how much allowance remains and how much tax the staggering saves.
 
 ## The Insight
 
