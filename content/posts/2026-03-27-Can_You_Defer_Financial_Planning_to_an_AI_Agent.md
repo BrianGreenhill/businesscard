@@ -9,7 +9,7 @@ draft: true
 
 Keeping track of a diversified portfolio is hard to do in your head. Dozens of positions across ETFs, bonds, and other products — each with different fee structures, tax treatment, and risk profiles. I had professional advice managing this, but I couldn't easily answer basic questions: *What am I actually paying in fees? Which positions are underperforming? Is there a simpler approach that historical data and established financial literature would support?*
 
-I wanted to find out. So I built a tool that ingests fund statements, models the domain, and runs the analysis — then compared its output to what professional advice had produced. The question wasn't whether to fire the advisor. It was whether a computational approach, grounded in industry literature and historical data, would arrive at similar conclusions or suggest something simpler.
+I wanted to understand what I owned and whether it could be simpler. So I built a tool that ingests fund statements, models the domain, and runs the analysis — grounded in historical data, established financial literature, and hedge fund strategies I'd been reading about.
 
 ## The Real Problem Is the PDF
 
