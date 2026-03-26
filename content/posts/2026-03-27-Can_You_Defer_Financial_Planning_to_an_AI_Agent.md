@@ -41,7 +41,7 @@ Once the parser can reconstruct a portfolio from statements, the interesting que
 
 The hard part of building this tool was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.
 
-Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs from a single Python file on a Raspberry Pi.
+Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs in Docker locally.
 
 The lesson isn't "fire your financial advisor." It's that much of what a retail advisor provides for a simple portfolio is computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.
 

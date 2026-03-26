@@ -75,7 +75,7 @@
 <p><strong>Tax-optimized exit planning.</strong> Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. The exit plan staggers sales across years to maximize that allowance — splitting non-whitelisted funds into immediate sales, next-year sales (to use next year's allowance), and notice-period sales. The tool tracks how much allowance remains and how much tax the staggering saves.</p>
 <h2>The Insight</h2>
 <p>The hard part of building this tool was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.</p>
-<p>Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs from a single Python file on a Raspberry Pi.</p>
+<p>Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs in Docker locally.</p>
 <p>The lesson isn't &quot;fire your financial advisor.&quot; It's that much of what a retail advisor provides for a simple portfolio is computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.</p>
 <hr>
 <p><em>The complexity was in the domain, not the infrastructure.</em></p>
