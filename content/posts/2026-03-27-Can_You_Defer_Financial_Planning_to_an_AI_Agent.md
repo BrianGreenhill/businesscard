@@ -25,17 +25,15 @@ The common cases are straightforward. A buy is a date, a fund, an amount, a pric
 
 These aren't hard computer science problems. They're hard *domain* problems — the kind that a financial advisor waves away because they only look at the summary, not the transactions.
 
-## What an Advisor Actually Does
+## What the Tool Computes
 
-Here's what I learned by building the tool: a retail financial advisor, for a straightforward portfolio, runs a spreadsheet. They track what you own, what you paid, and what it's worth. They might check allocation targets once a year. They charge a percentage for this.
+Once the parser can reconstruct a portfolio from statements, the interesting questions become computational:
 
-The computational version of that job is more interesting:
-
-**Health scoring.** A composite score from penalty sections — concentration risk, fee drag via TER analysis, geographic bias through look-through analysis of underlying holdings, category diversification. The score is a function of the portfolio state, not a judgment call. It changes when the data changes.
+**Health scoring.** A composite score from penalty sections — concentration risk, fee drag via TER analysis, geographic bias through look-through analysis of underlying holdings, category diversification. The score is a function of the portfolio state. It changes when the data changes.
 
 **Monte Carlo forecasting.** Percentile bands across multiple time horizons, using historical volatility from the actual fund universe rather than generic assumptions. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
 
-**Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. An optimal exit plan staggers sales across years to maximize that allowance. This is a constraint satisfaction problem, not a judgment call. A script solves it exactly; an advisor may not even mention it.
+**Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. An optimal exit plan staggers sales across years to maximize that allowance. This is a constraint satisfaction problem — well suited to a script that can explore the full solution space.
 
 ## The Insight
 
