@@ -37,6 +37,14 @@ Once the parser can reconstruct a portfolio from statements, the interesting que
 
 **Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. The exit plan staggers sales across years to maximize that allowance — splitting non-whitelisted funds into immediate sales, next-year sales (to use next year's allowance), and notice-period sales. The tool tracks how much allowance remains and how much tax the staggering saves.
 
+## How It Was Built
+
+Most of the implementation was done by AI coding agents. I described the domain, the edge cases, and the behavioral expectations — the agents wrote the code. The previous post on this blog, [*I Watched an AI Agent Refactor My Codebase While I Did Nothing*](/posts/2026-03-19-I_Watched_an_AI_Agent_Refactor_My_Codebase_While_I_Did_Nothing.html), documents one session in detail: an agent refactored the entire architecture, built a computation graph, wrote property-based contract tests, then ported the whole application from Go to Python — and deleted the Go code when it was done.
+
+That session was representative, not exceptional. The tool started as a Go project. Agents built it, tested it, and eventually rewrote it in Python — all driven by behavioral scenarios in YAML that define what the tool does, not how. My role was defining those scenarios, validating the output against real data, and catching the things the agents missed. The health scoring algorithm, for example, only converged after I compared the two implementations side by side and noticed they disagreed.
+
+The domain modeling — understanding German tax law, PDF structure, transaction semantics — was still mine to do. Agents are fast at writing code. They're not fast at reading Fondsabrechnungen and figuring out that a Vorabpauschale is actually two events.
+
 ## The Insight
 
 The hard part of building this tool was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.
@@ -52,11 +60,13 @@ The lesson is that understanding your own portfolio is an engineering problem wo
 <!--
 @agent-context
 pillar: building-personal-tools
+related_pillars: [ai-assisted-development]
 concepts:
   - structured PDF parsing as a domain modeling problem
   - German tax system as constraint satisfaction (Vorabpauschale, Freistellungsauftrag)
   - compound transactions (single document, multiple events)
-  - retail financial advice as a computational problem
+  - AI agentic workflows for building personal tools
+  - behavioral scenarios as the product specification
   - health scoring as composite penalty function
   - Monte Carlo simulation for portfolio forecasting
 related_repos:
