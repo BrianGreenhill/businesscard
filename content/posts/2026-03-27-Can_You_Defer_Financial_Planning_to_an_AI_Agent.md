@@ -3,7 +3,7 @@ title: Can You Defer Financial Planning to an AI Agent?
 date: 2026-03-27
 author: Brian Greenhill
 author_image: https://avatars.githubusercontent.com/u/1642339?v=4
-description: I built a tool to analyze fund statements and compare its strategy to professional advice. The hard part was modeling the domain, not writing the code.
+description: I built a tool to score my portfolio against established financial principles. It recommended reducing thirty-plus positions to fewer than five. The hard part was the domain.
 draft: true
 ---
 
@@ -23,19 +23,37 @@ The common cases are straightforward. A buy is a date, a fund, an amount, a pric
 
 **Ambiguous identifiers.** Sub-account numbers in the German fund system can also be valid securities identifiers (WKNs). The parser has to distinguish between "this is where the fund lives" and "this is which fund it is" from surrounding context.
 
-These aren't hard computer science problems. They're hard *domain* problems — the kind that a financial advisor waves away because they only look at the summary, not the transactions.
+These aren't hard computer science problems. They're hard *domain* problems — and they're invisible if you only look at the summary page.
 
 ## What the Tool Computes
 
-Once the parser can reconstruct a portfolio from statements, the interesting questions become computational:
+Once the parser can reconstruct a portfolio from statements, the tool scores it. The health score starts at 100 and applies penalties across ten sections — each measuring a different dimension of portfolio risk:
 
-**Health scoring.** A composite score from penalty sections — concentration risk, fee drag via TER analysis, geographic bias through look-through analysis of underlying holdings, category diversification. The score is a function of the portfolio state. It changes when the data changes.
+**Concentration.** Not at the fund level — at the *underlying company* level. The tool looks through each ETF or fund to its constituents, weights them by portfolio allocation, and flags when the top three companies across all holdings exceed a threshold. A portfolio with one broad-market ETF holding 500 companies scores well here. A portfolio with five ETFs that all hold the same top-ten companies doesn't.
 
-**Strategy and fund whitelisting.** The tool tracks allocation targets across categories and detects drift from those targets. Funds can be whitelisted — marked as core holdings to retain. Everything else becomes a candidate for the exit plan. This is the foundation the rest of the analysis builds on: which funds stay, which go, and what the target allocation looks like.
+**Fee drag.** Weighted average TER across all positions, benchmarked against low-cost passive indexes. The tool computes the annual fee in absolute terms and the potential savings from switching to lower-cost alternatives. High-TER active funds are the first candidates for the exit plan.
 
-**Monte Carlo forecasting.** Percentile bands across 5, 10, and 20-year horizons, using historical volatility from the actual fund universe rather than generic assumptions. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
+**Complexity.** The number of distinct positions in the portfolio. The tool treats simplification as a goal — fewer positions means easier rebalancing, lower transaction costs, and less cognitive overhead. Above a configurable threshold, the score drops.
+
+**Overlap.** What percentage of underlying companies appear in more than one fund? Redundant holdings mean you're paying multiple expense ratios for the same exposure.
+
+**Geographic bias.** The split between US and non-US equity exposure, measured against a configurable baseline. Drift beyond a threshold costs points.
+
+**Strategy and fund whitelisting.** Funds can be whitelisted — marked as core holdings to retain. The tool tracks allocation targets across categories and detects drift. Everything not on the whitelist becomes a candidate for the exit plan, prioritized by fee drag.
 
 **Tax-optimized exit planning.** Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. The exit plan staggers sales across years to maximize that allowance — splitting non-whitelisted funds into immediate sales, next-year sales (to use next year's allowance), and notice-period sales. The tool tracks how much allowance remains and how much tax the staggering saves.
+
+**Monte Carlo forecasting.** Percentile bands across 5, 10, and 20-year horizons, using historical volatility from the actual fund universe. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
+
+The scoring philosophy is grounded in passive indexing, broad diversification, and low fees. It's not novel financial theory — it's the consensus view from decades of index fund research, applied mechanically to a specific portfolio.
+
+## What the Tool Found
+
+The portfolio I started with had over thirty individual positions — a mix of actively managed funds, ETFs, bonds, and other products accumulated over years of professional advice. The tool scored it poorly. High overlap between funds holding the same underlying companies. Elevated fee drag from active management. Complexity well above the threshold for practical self-management.
+
+The tool's recommendation was drastic simplification: reduce to fewer than five positions anchored around a low-cost passive index core, with a small satellite allocation for commodity hedges as an inflation buffer. The exit plan staggered the liquidation of non-whitelisted funds across tax years to maximize the annual capital gains allowance.
+
+The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically. Broad diversification through a single low-cost index fund. Minimal overlap. Low fees. Geographic balance. These aren't secrets. They're the consensus view. The tool just made the gap between where the portfolio was and where the literature says it should be impossible to ignore.
 
 ## How It Was Built
 
@@ -47,15 +65,13 @@ The domain modeling — understanding German tax law, PDF structure, transaction
 
 ## The Insight
 
-The hard part of building this tool was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.
+German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case. The domain modeling was the real work. Once that was right, the rest was query logic — SQLite, a web UI, automatic price fetching, all running in Docker locally.
 
-Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs in Docker locally.
-
-The lesson is that understanding your own portfolio is an engineering problem worth solving. The expensive part wasn't the code — it was learning what questions to ask. For that, I had to read the PDFs myself.
+The answer to the title's question: yes, you can defer financial planning to a computational agent — if you're willing to do the domain work yourself first. The tool didn't invent a strategy. It applied established principles to real data and showed me what following the literature actually looks like for my specific portfolio. The gap between where I was and where I could be was wider than I expected.
 
 ---
 
-*The complexity was in the domain, not the infrastructure.*
+*The gap was wider than I expected.*
 
 <!--
 @agent-context
