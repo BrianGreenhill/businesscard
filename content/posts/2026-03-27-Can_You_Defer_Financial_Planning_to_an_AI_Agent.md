@@ -45,7 +45,7 @@ Once the parser can reconstruct a portfolio from statements, the tool scores it.
 
 **Monte Carlo forecasting.** Percentile bands across 5, 10, and 20-year horizons, using historical volatility from the actual fund universe. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.
 
-The scoring philosophy is grounded in passive indexing, broad diversification, and low fees. It's not novel financial theory — it's the consensus view from decades of index fund research, applied mechanically to a specific portfolio.
+The scoring philosophy is grounded in passive indexing, broad diversification, and low fees — but also in a deliberate constraint I gave it: the portfolio should be manageable by someone without a deep financial background. That constraint is why complexity is penalized. The tool wasn't just optimizing for returns — it was optimizing for comprehensibility.
 
 ## What the Tool Found
 
