@@ -43,7 +43,7 @@ The hard part of building this tool was never the code. It was understanding the
 
 Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs in Docker locally.
 
-The lesson isn't "fire your financial advisor." It's that much of what a retail advisor provides for a simple portfolio is computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.
+The lesson is that understanding your own portfolio is an engineering problem worth solving. The expensive part wasn't the code — it was learning what questions to ask. For that, I had to read the PDFs myself.
 
 ---
 
