@@ -1,17 +1,15 @@
 ---
 title: I Replaced My Financial Advisor With a Python Script
-date: 2026-04-15
+date: 2026-03-27
 author: Brian Greenhill
 author_image: https://avatars.githubusercontent.com/u/1642339?v=4
 description: What I learned about retail financial advice by building the replacement — parsing German fund statements, modeling a tax system, and discovering that the hard part was never the code.
 draft: true
 ---
 
-My financial consultant sent me a letter. The custodian behind my portfolio was closing, and everything needed to move to a new broker. The consultant would handle the transfer. What they wouldn't handle — what they'd never handled — was answering the questions I actually cared about: *What am I paying in fees? Which funds are dragging? What's my real return after tax?*
+German fund statements — Fondsabrechnungen — are structured PDFs. Transaction dates, fund identifiers, unit counts, tax adjustments. Each one is a snapshot of a portfolio at a single point in time. Individually, they answer simple questions: what happened this quarter? Collectively, they should answer harder ones: *What am I actually paying in fees? Which positions are dragging? What's the real return after tax?*
 
-I had years of quarterly fund statements sitting in a folder. Each one a record of what happened to my money. None of them connected to each other in any useful way.
-
-So I built a tool that connects them.
+No off-the-shelf tool connected them. The questions that matter most — fee drag, geographic concentration, tax-optimized exit timing — sit in the gaps between documents. So I built a tool that reads the statements, models the domain, and computes the answers.
 
 ## The Real Problem Is the PDF
 
