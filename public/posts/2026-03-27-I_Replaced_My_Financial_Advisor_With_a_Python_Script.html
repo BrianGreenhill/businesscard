@@ -1,0 +1,98 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="What I learned about retail financial advice by building the replacement — parsing German fund statements, modeling a tax system, and discovering that the hard part was never the code.">
+    <title>I Replaced My Financial Advisor With a Python Script — Brian Greenhill</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/assets/style.css">
+
+    
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="I Replaced My Financial Advisor With a Python Script">
+    <meta property="og:description" content="What I learned about retail financial advice by building the replacement — parsing German fund statements, modeling a tax system, and discovering that the hard part was never the code.">
+    <meta property="og:site_name" content="Brian Greenhill">
+    <meta property="article:author" content="Brian Greenhill">
+    <meta property="article:published_time" content="2026-03-27">
+
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="I Replaced My Financial Advisor With a Python Script">
+    <meta name="twitter:description" content="What I learned about retail financial advice by building the replacement — parsing German fund statements, modeling a tax system, and discovering that the hard part was never the code.">
+
+    
+    <link rel="canonical" href="https://briancurtis.de/posts/2026-03-27-I_Replaced_My_Financial_Advisor_With_a_Python_Script.html">
+
+    <style>.social-icons { display: none; }</style>
+</head>
+
+
+
+<body>
+    <header class="container">
+        <img class="author-img" src="https://avatars.githubusercontent.com/u/1642339?v=4" alt="Brian Greenhill" />
+        <h1><a href="/" class="site-title">Brian Greenhill</a></h1>
+        <h2>Staff Site Reliability Engineer at GitHub</h2>
+        <div class="social-icons">
+            <a href="https://github.com/BrianGreenhill"><img src="/assets/github-mark.svg" alt="GitHub" /></a>
+            <a href="https://www.linkedin.com/in/briangree"><img src="/assets/linkedin.png" alt="LinkedIn" /></a>
+            <a href="mailto:brian@briangreenhill.net"><img src="/assets/email.svg" alt="Email" /></a>
+        </div>
+    </header>
+    <main>
+        
+
+<article>
+    <header>
+        <div class="container">
+            <h1>I Replaced My Financial Advisor With a Python Script</h1>
+            
+            <p class="post-meta article-meta">
+                <img class="author-img" src="https://avatars.githubusercontent.com/u/1642339?v=4" alt="Brian Greenhill" />
+                <span>Brian Greenhill · 2026-03-27</span>
+            </p>
+        </div>
+    </header>
+    <section>
+        <div class="container"><p>German fund statements — Fondsabrechnungen — are structured PDFs. Transaction dates, fund identifiers, unit counts, tax adjustments. Each one is a snapshot of a portfolio at a single point in time. Individually, they answer simple questions: what happened this quarter? Collectively, they should answer harder ones: <em>What am I actually paying in fees? Which positions are dragging? What's the real return after tax?</em></p>
+<p>No off-the-shelf tool connected them. The questions that matter most — fee drag, geographic concentration, tax-optimized exit timing — sit in the gaps between documents. So I built a tool that reads the statements, models the domain, and computes the answers.</p>
+<h2>The Real Problem Is the PDF</h2>
+<p>German fund statements (Fondsabrechnungen) are multi-page PDFs with a specific structure: header block, one or more transaction blocks, tax summary footer. The transactions come in seven types — buys, sells, reinvestments, fee debits, custody fees, advance lump-sum tax sales, and gratuitous transfers — each with its own layout.</p>
+<p>The common cases are straightforward. A buy is a date, a fund, an amount, a price, and a number of units. The interesting engineering problems are the edge cases:</p>
+<p><strong>Compound tax transactions.</strong> Germany's Vorabpauschale is a tax on unrealized gains, settled by a forced micro-sale of fund units. It's a single PDF block that represents two events: a tax liability and a position reduction. If the parser treats it as one thing, your holdings drift.</p>
+<p><strong>Zero-amount transfers.</strong> When units move between sub-accounts, no money changes hands. The parser has to model a position change with no cash flow — which breaks any ingestion pipeline that assumes every transaction has an amount.</p>
+<p><strong>Ambiguous identifiers.</strong> Sub-account numbers in the German fund system can also be valid securities identifiers (WKNs). The parser has to distinguish between &quot;this is where the fund lives&quot; and &quot;this is which fund it is&quot; from surrounding context.</p>
+<p>These aren't hard computer science problems. They're hard <em>domain</em> problems — the kind that a financial advisor waves away because they only look at the summary, not the transactions.</p>
+<h2>What an Advisor Actually Does</h2>
+<p>Here's what I learned by building the replacement: a retail financial advisor, for a straightforward portfolio, runs a spreadsheet. They track what you own, what you paid, and what it's worth. They might check allocation targets once a year. They charge a percentage for this.</p>
+<p>The computational version of that job is more interesting:</p>
+<p><strong>Health scoring.</strong> A composite score from penalty sections — concentration risk, fee drag via TER analysis, geographic bias through look-through analysis of underlying holdings, category diversification. The score is a function of the portfolio state, not a judgment call. It changes when the data changes.</p>
+<p><strong>Monte Carlo forecasting.</strong> Percentile bands across multiple time horizons, using historical volatility from the actual fund universe rather than generic assumptions. The output isn't a prediction — it's a distribution. The shape of the distribution tells you things a single number never could.</p>
+<p><strong>Tax-optimized exit planning.</strong> Germany's Freistellungsauftrag gives individuals a tax-free allowance on capital gains each year. An optimal exit plan staggers sales across years to maximize that allowance. This is a constraint satisfaction problem, not a judgment call. A script solves it exactly; an advisor may not even mention it.</p>
+<h2>The Insight</h2>
+<p>The hard part of replacing a financial advisor was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.</p>
+<p>Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs from a single Python file on a Raspberry Pi.</p>
+<p>The lesson isn't &quot;fire your financial advisor.&quot; It's that the value a retail advisor provides for a simple portfolio is almost entirely computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.</p>
+<hr>
+<p><em>The complexity was in the domain, not the infrastructure.</em></p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+</div>
+    </section>
+</article>
+<footer class="container">
+    &copy; 2026 Brian Greenhill. All rights reserved.
+</footer>
+
+
+
+</body>
+
+</html>
+
+
+

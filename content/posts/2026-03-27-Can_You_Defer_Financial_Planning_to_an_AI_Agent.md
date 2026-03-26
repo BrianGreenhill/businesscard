@@ -1,15 +1,15 @@
 ---
-title: I Replaced My Financial Advisor With a Python Script
+title: Can You Defer Financial Planning to an AI Agent?
 date: 2026-03-27
 author: Brian Greenhill
 author_image: https://avatars.githubusercontent.com/u/1642339?v=4
-description: What I learned about retail financial advice by building the replacement — parsing German fund statements, modeling a tax system, and discovering that the hard part was never the code.
+description: I built a tool to analyze fund statements and compare its strategy to professional advice. The hard part was modeling the domain, not writing the code.
 draft: true
 ---
 
-German fund statements — Fondsabrechnungen — are structured PDFs. Transaction dates, fund identifiers, unit counts, tax adjustments. Each one is a snapshot of a portfolio at a single point in time. Individually, they answer simple questions: what happened this quarter? Collectively, they should answer harder ones: *What am I actually paying in fees? Which positions are dragging? What's the real return after tax?*
+Keeping track of a diversified portfolio is hard to do in your head. Dozens of positions across ETFs, bonds, and other products — each with different fee structures, tax treatment, and risk profiles. I had professional advice managing this, but I couldn't easily answer basic questions: *What am I actually paying in fees? Which positions are underperforming? Is there a simpler approach that historical data and established financial literature would support?*
 
-No off-the-shelf tool connected them. The questions that matter most — fee drag, geographic concentration, tax-optimized exit timing — sit in the gaps between documents. So I built a tool that reads the statements, models the domain, and computes the answers.
+I wanted to find out. So I built a tool that ingests fund statements, models the domain, and runs the analysis — then compared its output to what professional advice had produced. The question wasn't whether to fire the advisor. It was whether a computational approach, grounded in industry literature and historical data, would arrive at similar conclusions or suggest something simpler.
 
 ## The Real Problem Is the PDF
 
@@ -27,7 +27,7 @@ These aren't hard computer science problems. They're hard *domain* problems — 
 
 ## What an Advisor Actually Does
 
-Here's what I learned by building the replacement: a retail financial advisor, for a straightforward portfolio, runs a spreadsheet. They track what you own, what you paid, and what it's worth. They might check allocation targets once a year. They charge a percentage for this.
+Here's what I learned by building the tool: a retail financial advisor, for a straightforward portfolio, runs a spreadsheet. They track what you own, what you paid, and what it's worth. They might check allocation targets once a year. They charge a percentage for this.
 
 The computational version of that job is more interesting:
 
@@ -39,11 +39,11 @@ The computational version of that job is more interesting:
 
 ## The Insight
 
-The hard part of replacing a financial advisor was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.
+The hard part of building this tool was never the code. It was understanding the domain well enough to model it. German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case.
 
 Once the domain model was right, the rest was query logic. SQLite. A web UI. Automatic price fetching. The whole thing runs from a single Python file on a Raspberry Pi.
 
-The lesson isn't "fire your financial advisor." It's that the value a retail advisor provides for a simple portfolio is almost entirely computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.
+The lesson isn't "fire your financial advisor." It's that much of what a retail advisor provides for a simple portfolio is computational — and computation is cheap. The expensive part is knowing what to compute. For that, I had to read the PDFs myself.
 
 ---
 
