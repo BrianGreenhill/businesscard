@@ -57,6 +57,16 @@ The tool's recommendation was drastic simplification: reduce to fewer than five 
 
 The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically. Broad diversification through a single low-cost index fund. Minimal overlap. Low fees. Geographic balance. These aren't secrets. They're the consensus view. The tool just made the gap between where the portfolio was and where the literature says it should be impossible to ignore.
 
+## What Kind of Advisor Is This?
+
+In financial planning literature, the strategy the tool recommends has a name: [passive core-satellite](https://www.pm-research.com/content/iijpormgmt/31/1/64). A large core allocation in a broad, low-cost index fund provides market-rate returns and diversification. Small satellite positions — in this case, commodity hedges — target specific risks the core doesn't cover, like inflation.
+
+This isn't a patchwork. It's an [established framework](https://climateinstitute.edhec.edu/publications/revisiting-core-satellite-investing-dynamic-model-relative-risk-management) studied by Amenc, Malaise, and Martellini (2004) and adopted by institutional investors and robo-advisors alike. Vanguard publishes [model portfolios](https://www.vanguard.com.au/adviser/invest/model-portfolios/resources) built on the same structure. The approach is well-supported for managing cost and relative risk — the core controls expenses and benchmark tracking, the satellites allow targeted exposure without putting the whole portfolio at risk.
+
+The honest limitation: core-satellite doesn't protect against absolute market downturns. If the broad market drops, the core drops with it. The commodity satellites may buffer some of that, but they're a small allocation by design. The tool doesn't pretend otherwise — the Monte Carlo forecasting shows the full distribution, including the downside tails.
+
+So what the tool amounts to, in financial planning terms, is a mechanical implementation of a well-known strategy — one that a human advisor might also recommend, but that the tool enforces with scoring penalties instead of judgment calls. The difference isn't the strategy. It's that the tool makes the reasoning auditable and the execution systematic.
+
 ## How It Was Built
 
 Most of the implementation was done by AI coding agents. I described the domain, the edge cases, and the behavioral expectations — the agents wrote the code. The previous post on this blog, [*I Watched an AI Agent Refactor My Codebase While I Did Nothing*](/posts/2026-03-19-I_Watched_an_AI_Agent_Refactor_My_Codebase_While_I_Did_Nothing.html), documents one session in detail: an agent refactored the entire architecture, built a computation graph, wrote property-based contract tests, then ported the whole application from Go to Python — and deleted the Go code when it was done.
