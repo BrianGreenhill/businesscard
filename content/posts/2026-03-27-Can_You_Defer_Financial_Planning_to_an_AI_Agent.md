@@ -4,7 +4,7 @@ date: 2026-03-27
 author: Brian Greenhill
 author_image: https://avatars.githubusercontent.com/u/1642339?v=4
 description: I built a tool to score my portfolio against established financial principles. It recommended reducing thirty-plus positions to fewer than five. The hard part was the domain.
-draft: true
+draft: false
 ---
 
 Keeping track of a diversified portfolio is hard to do in your head. Dozens of positions across ETFs, bonds, and other products — each with different fee structures, tax treatment, and risk profiles. I had professional advice managing this, but I couldn't easily answer basic questions: *What am I actually paying in fees? Which positions are underperforming? Is there a simpler approach that historical data and established financial literature would support?*
