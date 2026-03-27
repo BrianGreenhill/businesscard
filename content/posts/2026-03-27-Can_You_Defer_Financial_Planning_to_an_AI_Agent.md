@@ -9,7 +9,7 @@ draft: true
 
 Keeping track of a diversified portfolio is hard to do in your head. Dozens of positions across ETFs, bonds, and other products — each with different fee structures, tax treatment, and risk profiles. I had professional advice managing this, but I couldn't easily answer basic questions: *What am I actually paying in fees? Which positions are underperforming? Is there a simpler approach that historical data and established financial literature would support?*
 
-I wanted to understand what I owned and whether it could be simpler. So I built a tool that ingests fund statements, models the domain, and runs the analysis — grounded in historical data, established financial literature, and hedge fund strategies I'd been reading about.
+I wanted to understand what I owned and whether it could be simpler. So I built a tool that ingests fund statements, models the domain, and runs the analysis — grounded in historical data and established financial literature.
 
 ## The Real Problem Is the PDF
 
@@ -41,7 +41,7 @@ The portfolio I started with had over thirty individual positions — a mix of a
 
 The recommendation was drastic simplification: reduce to fewer than five positions anchored around a low-cost passive index core, with a small satellite allocation for commodity hedges as an inflation buffer. The exit plan staggered the liquidation across tax years to maximize the annual capital gains allowance.
 
-The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically and the gap between where the portfolio was and where those principles say it should be was wider than I expected.
+The projected health score after executing the plan was substantially higher — not because the tool found some clever insight, but because it applied well-established principles mechanically. The gap between where the portfolio was and where those principles say it should be was wider than I expected.
 
 ## What Kind of Strategy Is This?
 
@@ -49,7 +49,9 @@ I didn't set out to implement a specific financial framework. But the strategy t
 
 This is an [established framework](https://climateinstitute.edhec.edu/publications/revisiting-core-satellite-investing-dynamic-model-relative-risk-management), studied by Amenc, Malaise, and Martellini (2004) and adopted by institutional investors and robo-advisors alike. Vanguard publishes [model portfolios](https://www.vanguard.com.au/adviser/invest/model-portfolios/resources) built on the same structure. The approach is well-supported for managing cost and relative risk — the core controls expenses and benchmark tracking, the satellites allow targeted exposure without putting the whole portfolio at risk.
 
-The individual scoring penalties have their own lineage. The fee drag penalty follows Bogle's argument that [costs are the most reliable predictor of fund performance](https://www.wiley.com/en-us/The+Little+Book+of+Common+Sense+Investing%3A+The+Only+Way+to+Guarantee+Your+Fair+Share+of+Stock+Market+Returns-p-9781119404507) — backed by the [SPIVA Scorecards](https://www.spglobal.com/spdji/en/research-insights/spiva/), which consistently show most active funds underperforming their benchmarks after fees. The diversification scoring draws on Markowitz's [portfolio selection](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1540-6261.1952.tb01525.x) framework. The simplification constraint echoes Malkiel's case in *A Random Walk Down Wall Street* for simple index portfolios — and [DeMiguel, Garlappi & Uppal's finding](https://doi.org/10.1093/rfs/hhm075) that naive equal-weight strategies often outperform complex optimized ones. The commodity hedge allocation takes a cue from Dalio's [All Weather](https://www.bridgewater.com/research-and-insights/the-all-weather-story) concept.
+The individual scoring penalties have their own lineage. The fee drag penalty follows Bogle's argument that [costs are the most reliable predictor of fund performance](https://www.wiley.com/en-us/The+Little+Book+of+Common+Sense+Investing%3A+The+Only+Way+to+Guarantee+Your+Fair+Share+of+Stock+Market+Returns-p-9781119404507) — backed by the [SPIVA Scorecards](https://www.spglobal.com/spdji/en/research-insights/spiva/), which consistently show most active funds underperforming their benchmarks after fees. The diversification scoring draws on Markowitz's [portfolio selection](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1540-6261.1952.tb01525.x) framework.
+
+The simplification constraint echoes Malkiel's case in *A Random Walk Down Wall Street* for simple index portfolios — and [DeMiguel, Garlappi & Uppal's finding](https://doi.org/10.1093/rfs/hhm075) that naive equal-weight strategies often outperform complex optimized ones. The commodity hedge allocation takes a cue from Dalio's [All Weather](https://www.bridgewater.com/research-and-insights/the-all-weather-story) concept.
 
 None of this is novel. What surprised me is that I didn't design toward core-satellite intentionally — the scoring algorithm arrived there by applying these principles independently. Fee penalties push toward low-cost index funds. Complexity penalties push toward fewer positions. Overlap penalties push toward consolidation. The result is core-satellite not because I told the tool to build one, but because that's what the literature's consensus looks like when you enforce it mechanically.
 
@@ -59,19 +61,31 @@ The honest limitation: core-satellite doesn't protect against absolute market do
 
 Most of the implementation was done by AI coding agents. I described the domain, the edge cases, and the behavioral expectations — the agents wrote the code. The previous post on this blog, [*I Watched an AI Agent Refactor My Codebase While I Did Nothing*](/posts/2026-03-19-I_Watched_an_AI_Agent_Refactor_My_Codebase_While_I_Did_Nothing.html), documents one session in detail: an agent refactored the entire architecture, built a computation graph, wrote property-based contract tests, then ported the whole application from Go to Python — and deleted the Go code when it was done.
 
-That session was representative, not exceptional. The tool started as a Go project. Agents built it, tested it, and eventually rewrote it in Python — all driven by behavioral scenarios in YAML that define what the tool does, not how. My role was defining those scenarios, validating the output against real data, and catching the things the agents missed. The health scoring algorithm, for example, only converged after I compared the two implementations side by side and noticed they disagreed.
+That session was representative, not exceptional. The tool started as a Go project. Agents built it, tested it, and eventually rewrote it in Python — all driven by behavioral scenarios in YAML that define what the tool does, not how:
+
+```yaml
+- name: exit plan has tax-aware staggering
+  description: with annual allowance exhausted, some gains should defer to next year
+  request:
+    method: GET
+    path: /api/exit-plan
+  expect:
+    json_path:
+      "$.next_year_sales.length": "> 0"
+      "$.tax_saved_by_stagger": "> 0"
+```
+
+My role was defining those scenarios, validating the output against real data, and catching the things the agents missed. The health scoring algorithm, for example, only converged after I compared the two implementations side by side and noticed they disagreed.
 
 The domain modeling — understanding German tax law, PDF structure, transaction semantics — was still mine to do. Agents are fast at writing code. They're not fast at reading Fondsabrechnungen and figuring out that a Vorabpauschale is actually two events.
 
 ## The Insight
 
-German tax law — Vorabpauschale, Freistellungsauftrag, Verlustverrechnungstopf — isn't something I chose to implement. It's something the tax code forced me to implement. Every edge case in the PDF parser exists because the financial system has that edge case. The domain modeling was the real work. Once that was right, the rest was query logic — SQLite, a web UI, automatic price fetching, all running in Docker locally.
-
-The answer to the title's question: yes, you can defer financial planning to a computational agent — if you're willing to do the domain work yourself first. The tool didn't invent a strategy. It applied established principles to real data and showed me what following the literature actually looks like for my specific portfolio. The gap between where I was and where I could be was wider than I expected.
+The answer to the title's question: yes, you can defer financial planning to a computational agent — if you're willing to do the domain work yourself first. The tool didn't invent a strategy. It applied established principles to real data and showed me what following the literature actually looks like for my specific portfolio. The domain modeling — German tax law, PDF structure, transaction semantics — was the real work. Once that was right, the rest was query logic: SQLite, a web UI, automatic price fetching, all running in Docker locally.
 
 ---
 
-*The gap was wider than I expected.*
+*The tool didn't find a clever insight. It found a wide gap.*
 
 <!--
 @agent-context
