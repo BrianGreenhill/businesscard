@@ -1,4 +1,5 @@
 ---
+draft: true
 title: I Watched an AI Agent Refactor My Codebase While I Did Nothing
 date: 2026-03-19
 author: Brian Greenhill

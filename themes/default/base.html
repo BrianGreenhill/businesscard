@@ -3,19 +3,6 @@
 {{ template "head" .Config }}
 
 {{ template "body" .Config }}
-<section>
-    <div class="container">
-        <h3 class="section-heading">Writing</h3>
-        <ul class="posts-list">
-            {{ range sortByDate .Posts }}
-            <li class="post-item">
-                <a class="post-link" href="posts/{{.Link}}">{{ .Title }}</a>
-                <p class="post-meta">{{ .Date }}</p>
-            </li>
-            {{ end }}
-        </ul>
-    </div>
-</section>
 <footer class="container">
     &copy; {{now.UTC.Year}} {{.Config.Author}}. All rights reserved.
 </footer>
